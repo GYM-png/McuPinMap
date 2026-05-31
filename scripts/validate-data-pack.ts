@@ -11,6 +11,17 @@ const manifestResult = validateManifest(manifest);
 const errors = [...manifestResult.errors];
 const warnings = [...manifestResult.warnings];
 
+for (const warning of warnings) {
+  console.warn(`Warning: ${warning}`);
+}
+
+if (errors.length > 0) {
+  for (const error of errors) {
+    console.error(`Error: ${error}`);
+  }
+  process.exit(1);
+}
+
 for (const chip of manifest.chips) {
   const csvPath = join(root, "data/chips", chip.gpioAfCsv);
   const csvText = readFileSync(csvPath, "utf8");
@@ -19,7 +30,7 @@ for (const chip of manifest.chips) {
   warnings.push(...csvResult.warnings.map((warning) => `${chip.id}: ${warning}`));
 }
 
-for (const warning of warnings) {
+for (const warning of warnings.slice(manifestResult.warnings.length)) {
   console.warn(`Warning: ${warning}`);
 }
 

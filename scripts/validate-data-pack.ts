@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { validateGpioAfCsvText } from "../src/shared/csv/validateGpioAfCsv";
+import { validateLqfpPinoutCsvText } from "../src/shared/csv/validateLqfpPinoutCsv";
 import { validateManifest } from "../src/shared/csv/validateManifest";
 import type { ChipManifest } from "../src/shared/types";
 
@@ -28,6 +29,20 @@ for (const chip of manifest.chips) {
   const csvResult = validateGpioAfCsvText(csvText);
   errors.push(...csvResult.errors.map((error) => `${chip.id}: ${error}`));
   warnings.push(...csvResult.warnings.map((warning) => `${chip.id}: ${warning}`));
+
+  for (const packageEntry of chip.packages) {
+    const match = /^LQFP(\d+)$/.exec(packageEntry.name);
+    if (!match) {
+      continue;
+    }
+
+    const pinoutCsvPath = join(root, "data/chips", packageEntry.pinoutCsv);
+    const pinoutCsvText = readFileSync(pinoutCsvPath, "utf8");
+    const pinoutResult = validateLqfpPinoutCsvText(pinoutCsvText, Number(match[1]));
+    const prefix = `${chip.id} ${packageEntry.name}`;
+    errors.push(...pinoutResult.errors.map((error) => `${prefix}: ${error}`));
+    warnings.push(...pinoutResult.warnings.map((warning) => `${prefix}: ${warning}`));
+  }
 }
 
 for (const warning of warnings.slice(manifestResult.warnings.length)) {

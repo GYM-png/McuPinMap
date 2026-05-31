@@ -33,6 +33,8 @@ export function validateLqfpPinoutCsvText(csvText: string, totalPads: number): V
 
     if (!Number.isInteger(padNumber) || padNumber < 1 || padNumber > totalPads) {
       errors.push(`Line ${lineNumber} PadNumber must be an integer from 1 to ${totalPads}.`);
+    } else if (padNumbers.has(padNumber)) {
+      errors.push(`Duplicate PadNumber ${padNumber}.`);
     } else {
       padNumbers.add(padNumber);
     }

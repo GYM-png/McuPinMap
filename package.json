@@ -38,10 +38,10 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "20.11.30",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/vscode": "^1.90.0",
+    "@types/vscode": "1.90.0",
     "@vscode/test-electron": "^2.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

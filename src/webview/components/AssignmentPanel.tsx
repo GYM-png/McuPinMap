@@ -12,6 +12,23 @@ export const AssignmentPanel = (): JSX.Element => {
         <h2 id="assignment-title">Assignments</h2>
       </div>
 
+      <div className="export-actions" aria-label="Export assignments">
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => vscode.postMessage({ type: "export", format: "json" })}
+        >
+          Export JSON
+        </button>
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => vscode.postMessage({ type: "export", format: "markdown" })}
+        >
+          Export Markdown
+        </button>
+      </div>
+
       <div className="assignment-list">
         {assignments.length === 0 ? (
           <p className="empty-state">No functions assigned yet.</p>

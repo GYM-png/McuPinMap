@@ -184,6 +184,13 @@ button:focus-visible {
   background: color-mix(in srgb, var(--vscode-editor-inactiveSelectionBackground) 60%, transparent);
 }
 
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .search-results span,
 .assignment-card strong,
 .function-card strong {

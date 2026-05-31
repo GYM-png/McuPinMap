@@ -7,6 +7,7 @@ import type {
   WebviewToExtensionMessage
 } from "../shared/protocol";
 import type { ChipRepository } from "./chipRepository";
+import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportConfig";
 
 const ASSIGNMENTS_KEY = "mcupinfunc.assignments";
 
@@ -83,6 +84,18 @@ export const openPinMapPanel = (
     });
   };
 
+  const exportAssignments = async (format: "json" | "markdown"): Promise<void> => {
+    const document = await vscode.workspace.openTextDocument({
+      content:
+        format === "json"
+          ? renderAssignmentsAsJson(getSelectedAssignments())
+          : renderAssignmentsAsMarkdown(getSelectedAssignments()),
+      language: format === "json" ? "json" : "markdown"
+    });
+
+    await vscode.window.showTextDocument(document, { preview: false });
+  };
+
   panel.webview.html = getHtml(panel.webview, context.extensionUri);
 
   panel.webview.onDidReceiveMessage(
@@ -125,10 +138,18 @@ export const openPinMapPanel = (
         }
 
         case "export":
-          postMessage({
-            type: "error",
-            message: "Export is not implemented in this webview shell yet."
-          });
+          try {
+            await exportAssignments(message.format);
+          } catch (error) {
+            postMessage({
+              type: "error",
+              message:
+                error instanceof Error
+                  ? `Failed to export assignments: ${error.message}`
+                  : "Failed to export assignments."
+            });
+          }
+
           break;
       }
     },

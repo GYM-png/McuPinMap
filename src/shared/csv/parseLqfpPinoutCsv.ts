@@ -15,6 +15,7 @@ export function parseLqfpPinoutCsvText(csvText: string, packageName: string): Pa
     throw new Error(`Unsupported package name ${packageName}. Expected LQFP<number>.`);
   }
 
+  const totalPads = Number(match[1]);
   const records = parse(csvText, {
     bom: true,
     columns: true,
@@ -23,15 +24,26 @@ export function parseLqfpPinoutCsvText(csvText: string, packageName: string): Pa
   }) as LqfpPinoutRecord[];
 
   const pins = records
-    .map((record): PackagePin => {
-      const pin: PackagePin = {
-        padNumber: Number(record.PadNumber),
-        pinName: record.PinName ?? ""
-      };
-
-      if (record.PinType && VALID_PIN_TYPES.has(record.PinType as PinType)) {
-        pin.pinType = record.PinType as PinType;
+    .map((record, index): PackagePin => {
+      const lineNumber = index + 2;
+      const padNumber = Number(record.PadNumber);
+      if (!Number.isInteger(padNumber) || padNumber < 1 || padNumber > totalPads) {
+        throw new Error(`Line ${lineNumber} PadNumber must be an integer from 1 to ${totalPads}.`);
       }
+
+      if (!record.PinType) {
+        throw new Error(`Line ${lineNumber} must have PinType.`);
+      }
+
+      if (!VALID_PIN_TYPES.has(record.PinType as PinType)) {
+        throw new Error(`Line ${lineNumber} PinType ${record.PinType} is unknown.`);
+      }
+
+      const pin: PackagePin = {
+        padNumber,
+        pinName: record.PinName ?? "",
+        pinType: record.PinType as PinType
+      };
 
       return pin;
     })
@@ -40,7 +52,7 @@ export function parseLqfpPinoutCsvText(csvText: string, packageName: string): Pa
   return {
     packageName,
     packageType: "LQFP",
-    totalPads: Number(match[1]),
+    totalPads,
     orientation: "pin1-top-left",
     pins
   };

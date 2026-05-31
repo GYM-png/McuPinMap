@@ -52,14 +52,24 @@ describe("validateLqfpPinoutCsvText", () => {
     expect(result.errors).toContain("Line 2 must have PinName.");
   });
 
-  it("warns for unknown PinType values", () => {
+  it("rejects unknown PinType values", () => {
     const csv = `PadNumber,PinName,PinType
 1,PE2,analog
 `;
     const result = validateLqfpPinoutCsvText(csv, 1);
 
-    expect(result.errors).toEqual([]);
-    expect(result.warnings).toContain("Line 2 PinType analog is unknown.");
+    expect(result.errors).toContain("Line 2 PinType analog is unknown.");
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("rejects missing PinType values", () => {
+    const csv = `PadNumber,PinName,PinType
+1,PE2,
+`;
+    const result = validateLqfpPinoutCsvText(csv, 1);
+
+    expect(result.errors).toContain("Line 2 must have PinType.");
+    expect(result.warnings).toEqual([]);
   });
 
   it("returns validation errors for malformed CSV", () => {

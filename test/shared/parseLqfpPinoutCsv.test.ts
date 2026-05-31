@@ -23,4 +23,30 @@ describe("parseLqfpPinoutCsvText", () => {
       ]
     });
   });
+
+  it("throws for unknown PinType values", () => {
+    const csv = `PadNumber,PinName,PinType
+1,PE2,analog
+`;
+
+    expect(() => parseLqfpPinoutCsvText(csv, "LQFP1")).toThrow("Line 2 PinType analog is unknown.");
+  });
+
+  it("throws for missing PinType values", () => {
+    const csv = `PadNumber,PinName,PinType
+1,PE2,
+`;
+
+    expect(() => parseLqfpPinoutCsvText(csv, "LQFP1")).toThrow("Line 2 must have PinType.");
+  });
+
+  it("throws for invalid PadNumber values", () => {
+    const csv = `PadNumber,PinName,PinType
+abc,PE2,gpio
+`;
+
+    expect(() => parseLqfpPinoutCsvText(csv, "LQFP1")).toThrow(
+      "Line 2 PadNumber must be an integer from 1 to 1."
+    );
+  });
 });

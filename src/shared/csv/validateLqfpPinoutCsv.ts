@@ -43,8 +43,10 @@ export function validateLqfpPinoutCsvText(csvText: string, totalPads: number): V
       errors.push(`Line ${lineNumber} must have PinName.`);
     }
 
-    if (row.PinType && !VALID_PIN_TYPES.has(row.PinType)) {
-      warnings.push(`Line ${lineNumber} PinType ${row.PinType} is unknown.`);
+    if (!row.PinType) {
+      errors.push(`Line ${lineNumber} must have PinType.`);
+    } else if (!VALID_PIN_TYPES.has(row.PinType)) {
+      errors.push(`Line ${lineNumber} PinType ${row.PinType} is unknown.`);
     }
   }
 

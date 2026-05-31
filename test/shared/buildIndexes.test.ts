@@ -19,6 +19,34 @@ const chip: Chip = {
           peripheral: "USART0",
           signal: "TX",
           aliases: ["USART0_TX"]
+        },
+        {
+          af: "AF7",
+          raw: "USART0_TX",
+          peripheral: "USART0",
+          signal: "TX",
+          aliases: ["USART0_TX"]
+        },
+        {
+          af: "AF7",
+          raw: "USART0_CK",
+          peripheral: "USART0",
+          signal: "CK",
+          aliases: ["USART0_CK"]
+        }
+      ]
+    },
+    {
+      name: "PB6",
+      port: "B",
+      number: 6,
+      functions: [
+        {
+          af: "AF7",
+          raw: "USART0_TX",
+          peripheral: "USART0",
+          signal: "TX",
+          aliases: ["USART0_TX"]
         }
       ]
     }
@@ -31,7 +59,14 @@ describe("buildChipIndexes", () => {
     const indexes = buildChipIndexes(chip);
 
     expect(indexes.functionsByPin.get("PA9")?.[0].raw).toBe("USART0_TX");
-    expect(indexes.pinsByFunction.get("USART0_TX")).toEqual(["PA9"]);
-    expect(indexes.pinsByPeripheral.get("USART0")).toEqual(["PA9"]);
+    expect(indexes.pinsByFunction.get("USART0_TX")).toEqual(["PA9", "PB6"]);
+    expect(indexes.pinsByPeripheral.get("USART0")).toEqual(["PA9", "PB6"]);
+  });
+
+  it("keeps pin names unique when duplicate functions and peripherals repeat", () => {
+    const indexes = buildChipIndexes(chip);
+
+    expect(indexes.pinsByFunction.get("USART0_TX")).toEqual(["PA9", "PB6"]);
+    expect(indexes.pinsByPeripheral.get("USART0")).toEqual(["PA9", "PB6"]);
   });
 });

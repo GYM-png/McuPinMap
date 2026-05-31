@@ -1,4 +1,16 @@
-const root = document.createElement("main");
-root.textContent = "McuPinFunc webview placeholder. Task 10 will replace this entry.";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import "./styles.css";
 
-document.body.appendChild(root);
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("Unable to find webview root element.");
+}
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);

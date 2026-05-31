@@ -37,8 +37,19 @@ export const openPinMapPanel = (
       ? assignments.filter((assignment) => assignment.chipId === selectedChipId)
       : [];
 
-  const persistAssignments = async (): Promise<void> => {
-    await context.workspaceState.update(ASSIGNMENTS_KEY, assignments);
+  const persistAssignments = async (nextAssignments: Assignment[]): Promise<void> => {
+    await context.workspaceState.update(ASSIGNMENTS_KEY, nextAssignments);
+    assignments = nextAssignments;
+  };
+
+  const postPersistenceError = (error: unknown): void => {
+    postMessage({
+      type: "error",
+      message:
+        error instanceof Error
+          ? `Failed to save assignments: ${error.message}`
+          : "Failed to save assignments."
+    });
   };
 
   const postChipLoaded = (): void => {
@@ -84,24 +95,34 @@ export const openPinMapPanel = (
 
         case "selectChip":
           selectedChipId = message.chipId;
-          assignments = assignments.filter(
-            (assignment) => assignment.chipId === selectedChipId
-          );
-          await persistAssignments();
           postChipLoaded();
           break;
 
-        case "assignFunction":
-          assignments = upsertAssignment(assignments, message.assignment);
-          await persistAssignments();
-          postAssignmentsUpdated();
-          break;
+        case "assignFunction": {
+          const nextAssignments = upsertAssignment(assignments, message.assignment);
 
-        case "removeAssignment":
-          assignments = removeAssignment(assignments, message.assignmentId);
-          await persistAssignments();
-          postAssignmentsUpdated();
+          try {
+            await persistAssignments(nextAssignments);
+            postAssignmentsUpdated();
+          } catch (error) {
+            postPersistenceError(error);
+          }
+
           break;
+        }
+
+        case "removeAssignment": {
+          const nextAssignments = removeAssignment(assignments, message.assignmentId);
+
+          try {
+            await persistAssignments(nextAssignments);
+            postAssignmentsUpdated();
+          } catch (error) {
+            postPersistenceError(error);
+          }
+
+          break;
+        }
 
         case "export":
           postMessage({

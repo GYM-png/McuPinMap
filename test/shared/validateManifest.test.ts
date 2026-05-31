@@ -43,4 +43,26 @@ describe("validateManifest", () => {
 
     expect(result.errors).toContain("Chip GD32F407 must reference a GPIO AF CSV named GD32F407_GPIO_AF.csv.");
   });
+
+  it("returns errors for null input", () => {
+    const result = validateManifest(null);
+
+    expect(result.errors).toContain("Manifest must be an object.");
+  });
+
+  it("returns errors for non-object input", () => {
+    const result = validateManifest("not a manifest");
+
+    expect(result.errors).toContain("Manifest must be an object.");
+  });
+
+  it("returns errors for non-object chip entries", () => {
+    const result = validateManifest({
+      schemaVersion: 1,
+      dataVersion: "2026.05.31",
+      chips: [null]
+    });
+
+    expect(result.errors).toContain("Each chip must be an object.");
+  });
 });

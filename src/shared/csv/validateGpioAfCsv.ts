@@ -6,11 +6,18 @@ const AF_HEADERS = Array.from({ length: 16 }, (_, index) => `AF${index}`);
 export function validateGpioAfCsvText(csvText: string): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const rows = parse(csvText, {
-    bom: true,
-    relax_column_count: true,
-    skip_empty_lines: true
-  }) as string[][];
+  let rows: string[][];
+
+  try {
+    rows = parse(csvText, {
+      bom: true,
+      relax_column_count: true,
+      skip_empty_lines: true
+    }) as string[][];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { errors: [`GPIO AF CSV could not be parsed: ${message}`], warnings };
+  }
 
   if (rows.length === 0) {
     return { errors: ["GPIO AF CSV must contain a header row."], warnings };

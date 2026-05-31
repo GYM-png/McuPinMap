@@ -16,4 +16,11 @@ describe("validateGpioAfCsvText", () => {
 
     expect(result.errors).toContain("GPIO AF CSV header must start with PinName.");
   });
+
+  it("returns validation errors for malformed CSV", () => {
+    const result = validateGpioAfCsvText('PinName,AF0\n"PA9,TIMER0_CH1');
+
+    expect(result.errors[0]).toMatch(/^GPIO AF CSV could not be parsed:/);
+    expect(result.warnings).toEqual([]);
+  });
 });

@@ -8,6 +8,12 @@ export type ValidationResult = {
 export function validateManifest(input: unknown): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    errors.push("Manifest must be an object.");
+    return { errors, warnings };
+  }
+
   const manifest = input as Partial<ChipManifest>;
 
   if (manifest.schemaVersion !== 1) {
@@ -24,8 +30,14 @@ export function validateManifest(input: unknown): ValidationResult {
   }
 
   const seen = new Set<string>();
-  for (const chip of manifest.chips as Array<Record<string, unknown>>) {
-    const id = chip.id;
+  for (const chip of manifest.chips as unknown[]) {
+    if (typeof chip !== "object" || chip === null || Array.isArray(chip)) {
+      errors.push("Each chip must be an object.");
+      continue;
+    }
+
+    const chipRecord = chip as Record<string, unknown>;
+    const id = chipRecord.id;
     if (typeof id !== "string" || id.length === 0) {
       errors.push("Each chip must have a non-empty id.");
       continue;
@@ -36,13 +48,13 @@ export function validateManifest(input: unknown): ValidationResult {
     }
     seen.add(id);
 
-    const gpioAfCsv = chip.gpioAfCsv;
+    const gpioAfCsv = chipRecord.gpioAfCsv;
     const expectedFile = `${id}_GPIO_AF.csv`;
     if (typeof gpioAfCsv !== "string" || !gpioAfCsv.endsWith(expectedFile)) {
       errors.push(`Chip ${id} must reference a GPIO AF CSV named ${expectedFile}.`);
     }
 
-    const packages = chip.packages;
+    const packages = chipRecord.packages;
     if (!Array.isArray(packages)) {
       errors.push(`Chip ${id} packages must be an array.`);
     }

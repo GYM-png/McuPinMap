@@ -8,7 +8,16 @@
       "family": "GD32F4",
       "displayName": "GD32F407",
       "gpioAfCsv": "gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv",
-      "packages": [],
+      "packages": [
+        {
+          "name": "LQFP100",
+          "pinoutCsv": "gigadevice/gd32f4/gd32f407/GD32F407_LQFP100_PINOUT.csv"
+        },
+        {
+          "name": "LQFP144",
+          "pinoutCsv": "gigadevice/gd32f4/gd32f407/GD32F407_LQFP144_PINOUT.csv"
+        }
+      ],
       "source": "GD32F407 GPIO AF CSV curated in this repository",
       "status": "stable"
     }

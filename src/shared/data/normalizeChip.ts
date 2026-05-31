@@ -1,13 +1,13 @@
-import type { Chip, ChipManifestEntry, Pin } from "../types";
+import type { Chip, ChipManifestEntry, PackageLayout, Pin } from "../types";
 
-export function normalizeChip(entry: ChipManifestEntry, pins: Pin[]): Chip {
+export function normalizeChip(entry: ChipManifestEntry, pins: Pin[], packages: PackageLayout[] = []): Chip {
   return {
     id: entry.id,
     displayName: entry.displayName,
     vendor: entry.vendor,
     family: entry.family,
     pins: pins.slice().sort(comparePins),
-    packages: []
+    packages
   };
 }
 

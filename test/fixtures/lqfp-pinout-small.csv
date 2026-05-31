@@ -1,0 +1,5 @@
+PadNumber,PinName,PinType
+1,PE2,gpio
+2,PE3,gpio
+3,VSS,ground
+4,VDD,power

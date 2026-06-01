@@ -1,4 +1,3 @@
-import Fuse from "fuse.js";
 import type { Chip } from "../types";
 
 export type SearchResultKind = "pin" | "function" | "peripheral";
@@ -19,31 +18,28 @@ export type SearchIndex = {
 
 export function createSearchIndex(chip: Chip): SearchIndex {
   const rows = buildSearchRows(chip);
-  const fuse = new Fuse(rows, {
-    keys: ["label", "pinName", "terms"],
-    threshold: 0.35,
-    ignoreLocation: true
-  });
 
   return {
     search(query: string): SearchResult[] {
-      const normalizedQuery = query.trim().toLowerCase();
+      const normalizedQuery = query.trim();
+      const normalizedQueryLower = normalizedQuery.toLowerCase();
 
       if (!normalizedQuery) {
         return [];
       }
 
       const exactRows = rows.filter((row) =>
-        row.terms.some((term) => term.toLowerCase() === normalizedQuery)
+        row.terms.some((term) => term.toLowerCase() === normalizedQueryLower)
       );
-      const includeRows = rows.filter(
+      const prefixRows = rows.filter(
         (row) =>
           !exactRows.includes(row) &&
-          row.terms.some((term) => term.toLowerCase().includes(normalizedQuery))
+          row.terms.some((term) =>
+            term.toLowerCase().startsWith(normalizedQueryLower)
+          )
       );
-      const fuzzyRows = fuse.search(query).map((result) => result.item);
 
-      return dedupeRows([...exactRows, ...includeRows, ...fuzzyRows]);
+      return dedupeRows([...exactRows, ...prefixRows]);
     }
   };
 }

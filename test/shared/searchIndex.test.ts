@@ -49,6 +49,24 @@ const chip: Chip = {
           aliases: ["USART1_TX"]
         }
       ]
+    },
+    {
+      name: "PA15",
+      port: "A",
+      number: 15,
+      functions: []
+    },
+    {
+      name: "PB15",
+      port: "B",
+      number: 15,
+      functions: []
+    },
+    {
+      name: "PA1",
+      port: "A",
+      number: 1,
+      functions: []
     }
   ],
   packages: []
@@ -71,6 +89,20 @@ describe("createSearchIndex", () => {
     });
   });
 
+  it("matches pin names by case-insensitive prefix only", () => {
+    const index = createSearchIndex(chip);
+    const pa15Result = [
+      {
+        kind: "pin" as const,
+        pinName: "PA15",
+        label: "PA15"
+      }
+    ];
+
+    expect(index.search("PA15")).toEqual(pa15Result);
+    expect(index.search("pa15")).toEqual(pa15Result);
+  });
+
   it("returns peripheral rows for peripheral name matches", () => {
     const index = createSearchIndex(chip);
 
@@ -81,7 +113,7 @@ describe("createSearchIndex", () => {
     });
   });
 
-  it("prefers exact function matches before fuzzy matches", () => {
+  it("prefers exact function matches before prefix matches", () => {
     const index = createSearchIndex(chip);
 
     expect(index.search("USART0_TX")[0]).toMatchObject({
@@ -91,19 +123,25 @@ describe("createSearchIndex", () => {
     });
   });
 
-  it("orders exact and includes matches before fuzzy-only matches", () => {
+  it("excludes fuzzy-only matches", () => {
     const index = createSearchIndex(chip);
     const results = index.search("USART0");
-    const fuzzyOnlyIndex = results.findIndex(
-      (result) => result.label === "USART1_TX"
-    );
-    const includeIndexes = results
-      .map((result, indexInResults) =>
-        result.label.includes("USART0") ? indexInResults : -1
-      )
-      .filter((indexInResults) => indexInResults >= 0);
 
-    expect(fuzzyOnlyIndex).toBeGreaterThan(Math.max(...includeIndexes));
+    expect(results).toContainEqual({
+      kind: "peripheral",
+      pinName: "PA9",
+      label: "USART0"
+    });
+    expect(results).toContainEqual({
+      kind: "function",
+      pinName: "PA9",
+      label: "USART0_TX"
+    });
+    expect(results).not.toContainEqual({
+      kind: "function",
+      pinName: "PB10",
+      label: "USART1_TX"
+    });
   });
 
   it("dedupes duplicate rows by kind, pinName, and label", () => {

@@ -53,7 +53,7 @@ When package pinout files are added, LQFP pinout CSV files use this header:
 PadNumber,PinName,PinType
 ```
 
-`PadNumber` must cover every pad in the package, for example `1..144` for `LQFP144`. `PinType` is optional and supports values such as `gpio`, `power`, `ground`, `reset`, `clock`, `boot`, and `nc`.
+`PadNumber` must cover every pad in the package, for example `1..144` for `LQFP144`. `PinType` is required and must be one of `gpio`, `power`, `ground`, `reset`, `clock`, `boot`, or `nc`.
 
 ## Development
 

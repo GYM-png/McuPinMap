@@ -69,7 +69,6 @@ src/shared/                 可单测的共享核心逻辑
 src/webview/                React Webview
 test/                       Vitest 测试
 docs/superpowers/           设计文档和实施计划
-GPIO_AF_CSVs/               原始 CSV 参考源
 ```
 
 不要提交：

@@ -440,7 +440,7 @@ Expected: commit succeeds.
 **Files:**
 - Create: `data/chips/manifest.json`
 - Create: `data/chips/gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv`
-- Modify: keep original `GPIO_AF_CSVs/GD32F407_GPIO_AF.csv` as source reference unless the project owner later removes it.
+- Source of truth: keep the curated GPIO AF CSV under `data/chips/**`; the early `GPIO_AF_CSVs/` import directory has been removed.
 
 - [ ] **Step 1: Create bundled chip directory**
 
@@ -448,10 +448,9 @@ Run:
 
 ```powershell
 New-Item -ItemType Directory -Force -Path 'data/chips/gigadevice/gd32f4/gd32f407'
-Copy-Item 'GPIO_AF_CSVs/GD32F407_GPIO_AF.csv' 'data/chips/gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv'
 ```
 
-Expected: copied CSV exists at `data/chips/gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv`.
+Expected: curated CSV exists at `data/chips/gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv`.
 
 - [ ] **Step 2: Create manifest**
 

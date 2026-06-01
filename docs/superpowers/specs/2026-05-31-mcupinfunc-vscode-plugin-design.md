@@ -4,7 +4,7 @@
 
 ## 1. 背景与目标
 
-McuPinFunc 的目标是基于类似 `GPIO_AF_CSVs/GD32F407_GPIO_AF.csv` 的 GPIO Alternate Function CSV，做一款面向 MCU 引脚配置的 VS Code 插件。插件默认内置经过规范化和校验的芯片 CSV 数据包，用户安装后即可选择目标芯片查询，不需要自己编写、下载或维护 CSV。用户可以快速查看某个 IO 支持哪些复用功能，也可以从某个外设功能反查可用 IO，并在一个 Pin Map 工作台中进行配置规划和冲突检查。
+McuPinFunc 的目标是基于类似 `data/chips/gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv` 的 GPIO Alternate Function CSV，做一款面向 MCU 引脚配置的 VS Code 插件。插件默认内置经过规范化和校验的芯片 CSV 数据包，用户安装后即可选择目标芯片查询，不需要自己编写、下载或维护 CSV。用户可以快速查看某个 IO 支持哪些复用功能，也可以从某个外设功能反查可用 IO，并在一个 Pin Map 工作台中进行配置规划和冲突检查。
 
 首版产品定位为“芯片配置型”工具，而不是单纯的 CSV 查询器或代码补全插件。MVP 采用逻辑 Pin Map：按端口 `PA/PB/PC...` 分组展示引脚，先不依赖真实封装脚位顺序。数据模型预留 `package/layout` 扩展，后续优先支持 LQFP 真实封装视图。
 

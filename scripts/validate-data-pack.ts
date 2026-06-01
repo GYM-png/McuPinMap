@@ -4,8 +4,10 @@ import { validateGpioAfCsvText } from "../src/shared/csv/validateGpioAfCsv";
 import { validateLqfpPinoutCsvText } from "../src/shared/csv/validateLqfpPinoutCsv";
 import { validateManifest } from "../src/shared/csv/validateManifest";
 import type { ChipManifest } from "../src/shared/types";
+import { syncChipManifest } from "./sync-chip-manifest";
 
 const root = process.cwd();
+syncChipManifest(root);
 const manifestPath = join(root, "data/chips/manifest.json");
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ChipManifest;
 const manifestResult = validateManifest(manifest);

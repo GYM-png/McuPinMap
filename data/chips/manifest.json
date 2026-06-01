@@ -20,6 +20,21 @@
       ],
       "source": "GD32F407 GPIO AF CSV curated in this repository",
       "status": "stable"
+    },
+    {
+      "id": "GD32H759",
+      "vendor": "GigaDevice",
+      "family": "GD32H7",
+      "displayName": "GD32H759",
+      "gpioAfCsv": "gigadevice/gd32h7/gd32h759/GD32H759_GPIO_AF.csv",
+      "packages": [
+        {
+          "name": "LQFP176",
+          "pinoutCsv": "gigadevice/gd32h7/gd32h759/GD32H759_LQFP176_PINOUT.csv"
+        }
+      ],
+      "source": "GD32H759 GPIO AF CSV scanned from data/chips/gigadevice/gd32h7/gd32h759",
+      "status": "draft"
     }
   ]
 }

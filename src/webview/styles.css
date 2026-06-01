@@ -8,7 +8,7 @@
   --soft-border: color-mix(in srgb, var(--vscode-panel-border) 75%, transparent);
   --accent: var(--vscode-focusBorder);
   --muted: var(--vscode-descriptionForeground);
-  --assigned: color-mix(in srgb, var(--vscode-charts-green) 24%, transparent);
+  --assigned: #455847;
   --conflict: color-mix(in srgb, var(--vscode-inputValidation-errorBorder) 30%, transparent);
   --search: color-mix(in srgb, var(--vscode-charts-yellow) 26%, transparent);
 }
@@ -316,7 +316,8 @@ button:focus-visible {
 }
 
 .pin-button.is-assigned {
-  box-shadow: inset 0 -4px 0 var(--assigned);
+  border-color: var(--assigned);
+  background: var(--assigned);
 }
 
 .pin-button.is-conflict {

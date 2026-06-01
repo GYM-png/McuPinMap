@@ -1,4 +1,5 @@
 import { createAssignmentId } from "../../shared/config/assignmentStore";
+import { createFunctionAssignmentMessage } from "../assignmentMessages";
 import { usePinMapStore } from "../state/usePinMapStore";
 import { vscode } from "../vscodeApi";
 
@@ -53,7 +54,11 @@ export const PinDetailPanel = (): JSX.Element => {
                   <button
                     type="button"
                     className={isAssigned ? "secondary-action is-active" : "primary-action"}
-                    onClick={() => vscode.postMessage({ type: "assignFunction", assignment })}
+                    onClick={() =>
+                      vscode.postMessage(
+                        createFunctionAssignmentMessage(assignment, isAssigned)
+                      )
+                    }
                   >
                     {isAssigned ? "Assigned" : "Assign"}
                   </button>

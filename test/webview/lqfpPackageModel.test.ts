@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SearchResult } from "../../src/shared/data/searchIndex";
 import type { Assignment, Conflict, PackageLayout, Pin } from "../../src/shared/types";
 import {
   classifyPackagePin,
   deriveLqfpSides,
-  getLqfpBodySize
+  getDraggedPackagePan,
+  getDraggedPackageScroll,
+  getCenteredPackagePan,
+  getLqfpBodySize,
+  getNextPackageZoom,
+  getPackagePanBounds,
+  stopPackageWheelScroll
 } from "../../src/webview/lqfpPackageModel";
 
 const packageLayout: PackageLayout = {
@@ -42,6 +48,106 @@ describe("getLqfpBodySize", () => {
     expect(getLqfpBodySize(100)).toBe("min(56vw, 520px)");
     expect(getLqfpBodySize(144)).toBe("min(64vw, 620px)");
     expect(getLqfpBodySize(176)).toBe("min(68vw, 700px)");
+  });
+});
+
+describe("getNextPackageZoom", () => {
+  it("zooms package maps in with upward wheel movement and out with downward movement", () => {
+    expect(getNextPackageZoom(1, -120)).toBe(1.1);
+    expect(getNextPackageZoom(1, 120)).toBe(0.9);
+  });
+
+  it("clamps wheel zoom so the package map remains usable", () => {
+    expect(getNextPackageZoom(1.8, -120)).toBe(1.8);
+    expect(getNextPackageZoom(0.6, 120)).toBe(0.6);
+  });
+});
+
+describe("stopPackageWheelScroll", () => {
+  it("prevents page scrolling when the package map consumes a wheel event", () => {
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn()
+    };
+
+    stopPackageWheelScroll(event);
+
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(event.stopPropagation).toHaveBeenCalledOnce();
+  });
+});
+
+describe("getDraggedPackageScroll", () => {
+  it("pans the package map opposite to mouse drag movement", () => {
+    expect(
+      getDraggedPackageScroll({
+        startClientX: 300,
+        startClientY: 200,
+        currentClientX: 260,
+        currentClientY: 230,
+        startScrollLeft: 100,
+        startScrollTop: 80
+      })
+    ).toEqual({
+      scrollLeft: 140,
+      scrollTop: 50
+    });
+  });
+});
+
+describe("getDraggedPackagePan", () => {
+  it("moves the visible package map with the mouse drag", () => {
+    expect(
+      getDraggedPackagePan({
+        startClientX: 300,
+        startClientY: 200,
+        currentClientX: 260,
+        currentClientY: 230,
+        startPanX: 12,
+        startPanY: -8
+      })
+    ).toEqual({
+      panX: -28,
+      panY: 22
+    });
+  });
+});
+
+describe("getCenteredPackagePan", () => {
+  it("returns the default centered package pan", () => {
+    expect(getCenteredPackagePan()).toEqual({ panX: 0, panY: 0 });
+  });
+});
+
+describe("getPackagePanBounds", () => {
+  it("allows package content to be partly clipped while keeping a visible edge in the package map", () => {
+    expect(
+      getPackagePanBounds({
+        viewportWidth: 800,
+        viewportHeight: 600,
+        contentWidth: 500,
+        contentHeight: 400
+      })
+    ).toEqual({
+      minPanX: -476,
+      maxPanX: 776,
+      minPanY: -376,
+      maxPanY: 576
+    });
+
+    expect(
+      getPackagePanBounds({
+        viewportWidth: 800,
+        viewportHeight: 600,
+        contentWidth: 1000,
+        contentHeight: 900
+      })
+    ).toEqual({
+      minPanX: -976,
+      maxPanX: 776,
+      minPanY: -876,
+      maxPanY: 576
+    });
   });
 });
 

@@ -362,15 +362,44 @@ button:focus-visible {
 }
 
 .package-map {
-  --lqfp-body-size: min(56vw, 520px);
-  --lqfp-side-rail: 84px;
+  --lqfp-base-body-size: min(56vw, 520px);
+  --package-zoom: 1;
+  --package-pan-x: 0px;
+  --package-pan-y: 0px;
+  --lqfp-body-size: calc(var(--lqfp-base-body-size) * var(--package-zoom));
+  --lqfp-side-rail: calc(84px * var(--package-zoom));
+  position: relative;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.package-map-content {
   display: grid;
   grid-template-columns: var(--lqfp-side-rail) var(--lqfp-body-size) var(--lqfp-side-rail);
   grid-template-rows: var(--lqfp-side-rail) var(--lqfp-body-size) var(--lqfp-side-rail);
   justify-content: center;
   gap: 8px;
-  overflow: auto;
-  padding: 8px;
+  transform: translate(var(--package-pan-x), var(--package-pan-y));
+  will-change: transform;
+}
+
+.package-center-button {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--soft-border);
+  border-radius: 999px;
+  color: inherit;
+  background: color-mix(in srgb, var(--vscode-editor-inactiveSelectionBackground) 82%, transparent);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+.package-center-button:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--vscode-editor-inactiveSelectionBackground));
 }
 
 .lqfp-body {
@@ -386,6 +415,14 @@ button:focus-visible {
   border-radius: 10px;
   background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
   box-shadow: inset 0 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent);
+  cursor: grab;
+  user-select: none;
+}
+
+.package-map.is-dragging,
+.package-map.is-dragging .lqfp-body {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .lqfp-body span {
@@ -584,8 +621,8 @@ button:focus-visible {
   }
 
   .package-map {
-    --lqfp-body-size: min(62vw, 420px);
-    --lqfp-side-rail: 64px;
+    --lqfp-base-body-size: min(62vw, 420px);
+    --lqfp-side-rail: calc(64px * var(--package-zoom));
     gap: 6px;
   }
 

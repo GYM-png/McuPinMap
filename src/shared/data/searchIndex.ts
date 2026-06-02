@@ -1,4 +1,4 @@
-import type { Chip } from "../types";
+import type { Chip, PinFunction } from "../types";
 
 export type SearchResultKind = "pin" | "function" | "peripheral";
 
@@ -29,19 +29,32 @@ export function createSearchIndex(chip: Chip): SearchIndex {
       }
 
       const exactRows = rows.filter((row) =>
-        row.terms.some((term) => term.toLowerCase() === normalizedQueryLower)
+        row.terms.some((term) => isExactTermMatch(term, normalizedQueryLower))
       );
       const prefixRows = rows.filter(
         (row) =>
           !exactRows.includes(row) &&
-          row.terms.some((term) =>
-            term.toLowerCase().startsWith(normalizedQueryLower)
-          )
+          row.terms.some((term) => isPrefixTermMatch(term, normalizedQueryLower))
       );
 
       return dedupeRows([...exactRows, ...prefixRows]);
     }
   };
+}
+
+export function matchesFunctionSearchQuery(fn: PinFunction, query: string): boolean {
+  const normalizedQuery = query.trim();
+  const normalizedQueryLower = normalizedQuery.toLowerCase();
+
+  if (!normalizedQuery) {
+    return false;
+  }
+
+  return getFunctionSearchTerms(fn).some(
+    (term) =>
+      isExactTermMatch(term, normalizedQueryLower) ||
+      isPrefixTermMatch(term, normalizedQueryLower)
+  );
 }
 
 function buildSearchRows(chip: Chip): SearchRow[] {
@@ -60,7 +73,7 @@ function buildSearchRows(chip: Chip): SearchRow[] {
         kind: "function",
         pinName: pin.name,
         label: fn.raw,
-        terms: [fn.raw, fn.peripheral, fn.signal, fn.af, ...fn.aliases]
+        terms: getFunctionSearchTerms(fn)
       });
       rows.push({
         kind: "peripheral",
@@ -72,6 +85,18 @@ function buildSearchRows(chip: Chip): SearchRow[] {
   }
 
   return rows;
+}
+
+function getFunctionSearchTerms(fn: PinFunction): string[] {
+  return [fn.raw, fn.peripheral, fn.signal, fn.af, ...fn.aliases];
+}
+
+function isExactTermMatch(term: string, normalizedQueryLower: string): boolean {
+  return term.toLowerCase() === normalizedQueryLower;
+}
+
+function isPrefixTermMatch(term: string, normalizedQueryLower: string): boolean {
+  return term.toLowerCase().startsWith(normalizedQueryLower);
 }
 
 function dedupeRows(rows: SearchRow[]): SearchResult[] {

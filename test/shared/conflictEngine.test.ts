@@ -46,4 +46,15 @@ describe("detectConflicts", () => {
       kind: "signal-duplicate"
     });
   });
+
+  it("allows GPIO input or output to be assigned on multiple pins", () => {
+    const assignments = [
+      assignment("gd32f407:PA0:GPIO_OUT", "PA0", "GPIO_OUT", "GPIO", "OUT"),
+      assignment("gd32f407:PB1:GPIO_OUT", "PB1", "GPIO_OUT", "GPIO", "OUT"),
+      assignment("gd32f407:PC2:GPIO_IN", "PC2", "GPIO_IN", "GPIO", "IN"),
+      assignment("gd32f407:PD3:GPIO_IN", "PD3", "GPIO_IN", "GPIO", "IN")
+    ];
+
+    expect(detectConflicts(assignments)).toEqual([]);
+  });
 });

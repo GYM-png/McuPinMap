@@ -346,6 +346,11 @@ button:focus-visible {
   background: var(--search);
 }
 
+.function-card.is-search-match {
+  border-color: color-mix(in srgb, var(--vscode-charts-yellow) 70%, var(--soft-border));
+  background: var(--search);
+}
+
 .pin-button.is-assigned {
   border-color: var(--assigned);
   background: var(--assigned);

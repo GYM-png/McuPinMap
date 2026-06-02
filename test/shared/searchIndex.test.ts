@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSearchIndex } from "../../src/shared/data/searchIndex";
+import { createSearchIndex, matchesFunctionSearchQuery } from "../../src/shared/data/searchIndex";
 import type { Chip } from "../../src/shared/types";
 
 const chip: Chip = {
@@ -154,5 +154,26 @@ describe("createSearchIndex", () => {
     );
 
     expect(results).toHaveLength(1);
+  });
+});
+
+describe("matchesFunctionSearchQuery", () => {
+  const canFunction = {
+    af: "AF9",
+    raw: "CAN1_RX",
+    peripheral: "CAN1",
+    signal: "RX",
+    aliases: ["CAN_RX"]
+  };
+
+  it("matches a selected pin detail function by the active peripheral query", () => {
+    expect(matchesFunctionSearchQuery(canFunction, "CAN1")).toBe(true);
+  });
+
+  it("uses the same trimmed case-insensitive exact and prefix search semantics", () => {
+    expect(matchesFunctionSearchQuery(canFunction, " can1 ")).toBe(true);
+    expect(matchesFunctionSearchQuery(canFunction, "can1_r")).toBe(true);
+    expect(matchesFunctionSearchQuery(canFunction, "AN1")).toBe(false);
+    expect(matchesFunctionSearchQuery(canFunction, "")).toBe(false);
   });
 });

@@ -15,6 +15,13 @@ describe("webview styles", () => {
     );
   });
 
+  it("defines a visible search match state for function cards", () => {
+    expect(styles).toMatch(/\.function-card\.is-search-match\s*{/);
+    expect(styles).toMatch(
+      /\.function-card\.is-search-match\s*{[^}]*background:\s*var\(--search\);/s
+    );
+  });
+
   it("defines compact LQFP package map state styles", () => {
     expect(styles).toMatch(/\.package-map/);
     expect(styles).toMatch(/\.lqfp-pad/);

@@ -37,7 +37,7 @@ export const detectConflicts = (assignments: Assignment[]): Conflict[] => [
     })
   ),
   ...createGroupedConflicts(
-    assignments,
+    assignments.filter((assignment) => !isSharedGpioModeAssignment(assignment)),
     (assignment) => `${assignment.peripheral}:${assignment.signal}`,
     (key, rows) => {
       const [peripheral, signal] = key.split(":");
@@ -51,3 +51,10 @@ export const detectConflicts = (assignments: Assignment[]): Conflict[] => [
     }
   )
 ];
+
+function isSharedGpioModeAssignment(assignment: Assignment): boolean {
+  return (
+    assignment.peripheral === "GPIO" &&
+    (assignment.signal === "IN" || assignment.signal === "OUT")
+  );
+}

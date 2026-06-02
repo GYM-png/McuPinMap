@@ -1,4 +1,5 @@
 import { createAssignmentId } from "../../shared/config/assignmentStore";
+import { matchesFunctionSearchQuery } from "../../shared/data/searchIndex";
 import { createFunctionAssignmentMessage } from "../assignmentMessages";
 import { usePinMapStore } from "../state/usePinMapStore";
 import { vscode } from "../vscodeApi";
@@ -6,6 +7,7 @@ import { vscode } from "../vscodeApi";
 export const PinDetailPanel = (): JSX.Element => {
   const chip = usePinMapStore((state) => state.chip);
   const pin = usePinMapStore((state) => state.selectedPin());
+  const query = usePinMapStore((state) => state.query);
   const assignments = usePinMapStore((state) => state.assignments);
   const assignedFunctionIds = new Set(
     assignments
@@ -42,9 +44,13 @@ export const PinDetailPanel = (): JSX.Element => {
                 signal: fn.signal
               };
               const isAssigned = assignedFunctionIds.has(assignment.id);
+              const isSearchMatch = matchesFunctionSearchQuery(fn, query);
 
               return (
-                <article key={assignment.id} className="function-card">
+                <article
+                  key={assignment.id}
+                  className={`function-card${isSearchMatch ? " is-search-match" : ""}`}
+                >
                   <div>
                     <strong>{fn.raw}</strong>
                     <small>

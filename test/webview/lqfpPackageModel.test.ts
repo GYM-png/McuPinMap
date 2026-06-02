@@ -220,4 +220,32 @@ describe("classifyPackagePin", () => {
       })
     ).toMatchObject({ isInteractive: false, classNames: expect.stringContaining("is-unmapped") });
   });
+
+  it("maps GPIO pads with package suffixes to their base GPIO pin", () => {
+    const pa0: Pin = {
+      name: "PA0",
+      port: "PA",
+      number: 0,
+      functions: []
+    };
+
+    const viewModel = classifyPackagePin({
+      packagePin: { padNumber: 23, pinName: "PA0-WKUP", pinType: "gpio" },
+      pinsByName: new Map([[pa0.name, pa0]]),
+      selectedPinName: "PA0",
+      searchResults: [{ kind: "pin", pinName: "PA0", label: "PA0" }],
+      assignments: [],
+      conflicts: []
+    });
+
+    expect(viewModel).toMatchObject({
+      pin: pa0,
+      isInteractive: true,
+      isSelected: true,
+      isSearchMatch: true,
+      label: "PA0-WKUP"
+    });
+    expect(viewModel.classNames).toContain("is-interactive");
+    expect(viewModel.classNames).not.toContain("is-unmapped");
+  });
 });

@@ -179,6 +179,14 @@ export const deriveLqfpSides = (layout: { totalPads: number; pins: PackagePin[] 
   return sides;
 };
 
+const resolvePackageGpioPin = (packagePin: PackagePin, pinsByName: Map<string, Pin>): Pin | undefined => {
+  if (packagePin.pinType !== "gpio") {
+    return undefined;
+  }
+
+  return pinsByName.get(packagePin.pinName) ?? pinsByName.get(packagePin.pinName.split("-")[0]);
+};
+
 export const classifyPackagePin = ({
   packagePin,
   pinsByName,
@@ -187,17 +195,18 @@ export const classifyPackagePin = ({
   assignments,
   conflicts
 }: PackagePinClassificationInput): PackagePinViewModel => {
-  const pin = pinsByName.get(packagePin.pinName);
+  const pin = resolvePackageGpioPin(packagePin, pinsByName);
+  const resolvedPinName = pin?.name ?? packagePin.pinName;
   const isMappedGpio = packagePin.pinType === "gpio" && pin !== undefined;
   const conflictedAssignmentIds = new Set(conflicts.flatMap((conflict) => conflict.assignmentIds));
-  const isAssigned = assignments.some((assignment) => assignment.pinName === packagePin.pinName);
+  const isAssigned = assignments.some((assignment) => assignment.pinName === resolvedPinName);
   const isConflict = assignments.some(
     (assignment) =>
-      assignment.pinName === packagePin.pinName &&
+      assignment.pinName === resolvedPinName &&
       conflictedAssignmentIds.has(assignment.id)
   );
-  const isSearchMatch = searchResults.some((result) => result.pinName === packagePin.pinName);
-  const isSelected = packagePin.pinName === selectedPinName;
+  const isSearchMatch = searchResults.some((result) => result.pinName === resolvedPinName);
+  const isSelected = resolvedPinName === selectedPinName;
   const typeClass = `is-${packagePin.pinType ?? "unknown"}`;
   const classNames = [
     "lqfp-pad",

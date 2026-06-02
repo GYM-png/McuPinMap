@@ -136,6 +136,33 @@ small {
   margin-bottom: 16px;
 }
 
+.map-toolbar {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.map-view-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--soft-border);
+  border-radius: 999px;
+  background: var(--vscode-editor-inactiveSelectionBackground);
+}
+
+.map-view-toggle button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+}
+
+.map-view-toggle button.is-active {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
 select,
 input[type="search"] {
   width: 100%;
@@ -145,6 +172,10 @@ input[type="search"] {
   border-radius: 12px;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
+}
+
+.package-selector {
+  max-width: 150px;
 }
 
 select:focus,
@@ -325,6 +356,164 @@ button:focus-visible {
   background: var(--conflict);
 }
 
+.package-map {
+  --lqfp-body-size: min(56vw, 520px);
+  --lqfp-side-rail: 84px;
+  display: grid;
+  grid-template-columns: var(--lqfp-side-rail) var(--lqfp-body-size) var(--lqfp-side-rail);
+  grid-template-rows: var(--lqfp-side-rail) var(--lqfp-body-size) var(--lqfp-side-rail);
+  justify-content: center;
+  gap: 8px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.lqfp-body {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  width: var(--lqfp-body-size);
+  height: var(--lqfp-body-size);
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  box-shadow: inset 0 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.lqfp-body span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.lqfp-side {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.lqfp-side-top {
+  grid-column: 2;
+  grid-row: 1;
+  width: var(--lqfp-body-size);
+  height: var(--lqfp-side-rail);
+}
+
+.lqfp-side-bottom {
+  grid-column: 2;
+  grid-row: 3;
+  width: var(--lqfp-body-size);
+  height: var(--lqfp-side-rail);
+}
+
+.lqfp-side-left {
+  grid-column: 1;
+  grid-row: 2;
+  width: var(--lqfp-side-rail);
+  height: var(--lqfp-body-size);
+}
+
+.lqfp-side-right {
+  grid-column: 3;
+  grid-row: 2;
+  width: var(--lqfp-side-rail);
+  height: var(--lqfp-body-size);
+}
+
+.lqfp-pad {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 3px;
+  border: 1px solid var(--soft-border);
+  border-radius: 5px;
+  color: inherit;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  text-align: center;
+}
+
+.lqfp-pad[aria-disabled="true"] {
+  cursor: default;
+}
+
+.lqfp-pad .pad-number,
+.lqfp-pad .pad-label,
+.lqfp-pad small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lqfp-pad .pad-number {
+  display: none;
+}
+
+.lqfp-pad .pad-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lqfp-pad small {
+  display: block;
+  font-size: 0;
+}
+
+.lqfp-side-top .pad-label,
+.lqfp-side-bottom .pad-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.lqfp-pad:hover small,
+.lqfp-pad:focus-visible small,
+.lqfp-pad.is-selected small {
+  font-size: 0.58rem;
+}
+
+.lqfp-pad.is-power,
+.lqfp-pad.is-ground {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--vscode-editor-inactiveSelectionBackground) 55%, transparent);
+}
+
+.lqfp-pad.is-reset,
+.lqfp-pad.is-clock,
+.lqfp-pad.is-boot {
+  border-color: color-mix(in srgb, var(--vscode-charts-orange) 42%, var(--soft-border));
+}
+
+.lqfp-pad.is-nc,
+.lqfp-pad.is-unmapped {
+  color: var(--muted);
+  border-style: dashed;
+}
+
+.lqfp-pad.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.lqfp-pad.is-search-match {
+  background: var(--search);
+}
+
+.lqfp-pad.is-assigned {
+  border-color: var(--assigned);
+  background: var(--assigned);
+}
+
+.lqfp-pad.is-conflict {
+  border-color: var(--vscode-inputValidation-errorBorder);
+  background: var(--conflict);
+}
+
 .primary-action,
 .secondary-action,
 .ghost-action {
@@ -380,7 +569,22 @@ button:focus-visible {
     display: block;
   }
 
+  .map-toolbar {
+    justify-items: start;
+    margin-top: 14px;
+  }
+
   .summary-pills {
     margin-top: 14px;
+  }
+
+  .package-map {
+    --lqfp-body-size: min(62vw, 420px);
+    --lqfp-side-rail: 64px;
+    gap: 6px;
+  }
+
+  .lqfp-pad {
+    padding: 1px 2px;
   }
 }

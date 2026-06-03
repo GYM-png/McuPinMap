@@ -1,6 +1,6 @@
 import type { Pin } from "../../shared/types";
 import { usePinMapStore } from "../state/usePinMapStore";
-import { LqfpPackageMap } from "./LqfpPackageMap";
+import { PackageMap } from "./PackageMap";
 
 type PortGroup = {
   port: string;
@@ -120,7 +120,7 @@ export const LogicalPinMap = (): JSX.Element => {
       </div>
 
       {mapView === "package" && selectedPackage ? (
-        <LqfpPackageMap layout={selectedPackage} />
+        <PackageMap layout={selectedPackage} />
       ) : (
         <div className="port-grid">
           {ports.map((group) => (

@@ -15,7 +15,7 @@ type ScannedChip = {
 };
 
 const GPIO_AF_FILE = /^(.+)_GPIO_AF\.csv$/;
-const LQFP_PINOUT_FILE = /^(.+)_LQFP(\d+)_PINOUT\.csv$/;
+const PACKAGE_PINOUT_FILE = /^(.+)_(LQFP|BGA)(\d+)_PINOUT\.csv$/;
 
 function toManifestPath(dataRoot: string, filePath: string): string {
   return relative(dataRoot, filePath).replace(/\\/g, "/");
@@ -72,7 +72,7 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
         continue;
       }
 
-      const pinoutMatch = LQFP_PINOUT_FILE.exec(entry);
+      const pinoutMatch = PACKAGE_PINOUT_FILE.exec(entry);
       if (pinoutMatch) {
         const chipId = pinoutMatch[1];
         const files = pinoutFilesByChip.get(chipId) ?? [];
@@ -103,18 +103,23 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
       const packages = chipPinouts
         .map((pinoutPath) => {
           const pinoutFileName = pinoutPath.split(/[\\/]/).pop() ?? "";
-          const pinoutMatch = LQFP_PINOUT_FILE.exec(pinoutFileName);
+          const pinoutMatch = PACKAGE_PINOUT_FILE.exec(pinoutFileName);
           if (!pinoutMatch) {
             return undefined;
           }
 
           return {
-            name: `LQFP${pinoutMatch[2]}`,
+            name: `${pinoutMatch[2]}${pinoutMatch[3]}`,
             pinoutCsv: toManifestPath(dataRoot, pinoutPath)
           };
         })
         .filter((entry): entry is { name: string; pinoutCsv: string } => entry !== undefined)
-        .sort((left, right) => Number(left.name.slice(4)) - Number(right.name.slice(4)));
+        .sort((left, right) => {
+          const typeCompare = left.name.replace(/\d+$/, "").localeCompare(right.name.replace(/\d+$/, ""));
+          return typeCompare === 0
+            ? Number(left.name.replace(/^\D+/, "")) - Number(right.name.replace(/^\D+/, ""))
+            : typeCompare;
+        });
 
       return {
         id,

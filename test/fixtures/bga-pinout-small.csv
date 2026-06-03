@@ -1,0 +1,5 @@
+BallName,PinName,PinType
+A1,PA0,gpio
+A2,VSS,ground
+B1,PB1,gpio
+B2,VDD,power

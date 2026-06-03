@@ -44,4 +44,19 @@ describe("webview styles", () => {
     expect(styles).toMatch(/\.lqfp-pad \.pad-label\s*{[^}]*font-size:\s*0\.62rem;/s);
     expect(styles).toMatch(/\.lqfp-side-top \.pad-label,\s*\.lqfp-side-bottom \.pad-label\s*{[^}]*writing-mode:\s*vertical-rl;/s);
   });
+
+  it("defines BGA matrix package map styles", () => {
+    expect(styles).toMatch(/\.bga-package-map/);
+    expect(styles).toMatch(/--bga-base-ball-size:\s*38px;/);
+    expect(styles).toMatch(/--bga-ball-size:\s*calc\(var\(--bga-base-ball-size\) \* var\(--package-zoom\)\);/);
+    expect(styles).toMatch(/\.bga-package-map\s*{[^}]*place-items:\s*center;/s);
+    expect(styles).toMatch(/\.bga-package-frame\s*{[^}]*border:\s*1px solid/s);
+    expect(styles).toMatch(/\.bga-grid-shell\s*{[^}]*transform:\s*translate\(var\(--package-pan-x\), var\(--package-pan-y\)\);/s);
+    expect(styles).toMatch(/\.bga-column-header,\s*\.bga-row-cells\s*{[^}]*repeat\(var\(--bga-column-count\),\s*var\(--bga-ball-size\)\)/s);
+    expect(styles).toMatch(/\.bga-ball\s*{[^}]*aspect-ratio:\s*1;/s);
+    expect(styles).toMatch(/\.bga-ball\.is-empty/);
+    expect(styles).toMatch(/\.bga-ball\.is-search-match/);
+    expect(styles).toMatch(/\.bga-ball\.is-assigned/);
+    expect(styles).toMatch(/\.bga-ball\.is-conflict/);
+  });
 });

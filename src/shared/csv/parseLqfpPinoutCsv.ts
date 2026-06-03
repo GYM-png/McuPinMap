@@ -47,7 +47,7 @@ export function parseLqfpPinoutCsvText(csvText: string, packageName: string): Pa
 
       return pin;
     })
-    .sort((left, right) => left.padNumber - right.padNumber);
+    .sort((left, right) => (left.padNumber ?? 0) - (right.padNumber ?? 0));
 
   return {
     packageName,

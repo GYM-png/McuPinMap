@@ -37,6 +37,7 @@ describe("syncChipManifest", () => {
 
     writeFileSync(join(existingChipDir, "GD32F407_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
     writeFileSync(join(existingChipDir, "GD32F407_LQFP144_PINOUT.csv"), "PadNumber,PinName,PinType\n", "utf8");
+    writeFileSync(join(existingChipDir, "GD32F407_BGA176_PINOUT.csv"), "BallName,PinName,PinType\n", "utf8");
     writeFileSync(join(newChipDir, "GD32H759_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
     writeFileSync(join(newChipDir, "GD32H759_LQFP176_PINOUT.csv"), "PadNumber,PinName,PinType\n", "utf8");
 
@@ -48,6 +49,10 @@ describe("syncChipManifest", () => {
       source: "hand curated",
       status: "stable",
       packages: [
+        {
+          name: "BGA176",
+          pinoutCsv: "gigadevice/gd32f4/gd32f407/GD32F407_BGA176_PINOUT.csv"
+        },
         {
           name: "LQFP144",
           pinoutCsv: "gigadevice/gd32f4/gd32f407/GD32F407_LQFP144_PINOUT.csv"

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { validateBgaPinoutCsvText } from "../src/shared/csv/validateBgaPinoutCsv";
 import { validateGpioAfCsvText } from "../src/shared/csv/validateGpioAfCsv";
 import { validateLqfpPinoutCsvText } from "../src/shared/csv/validateLqfpPinoutCsv";
 import { validateManifest } from "../src/shared/csv/validateManifest";
@@ -33,14 +34,17 @@ for (const chip of manifest.chips) {
   warnings.push(...csvResult.warnings.map((warning) => `${chip.id}: ${warning}`));
 
   for (const packageEntry of chip.packages) {
-    const match = /^LQFP(\d+)$/.exec(packageEntry.name);
-    if (!match) {
+    const lqfpMatch = /^LQFP(\d+)$/.exec(packageEntry.name);
+    const bgaMatch = /^BGA(\d+)$/.exec(packageEntry.name);
+    if (!lqfpMatch && !bgaMatch) {
       continue;
     }
 
     const pinoutCsvPath = join(root, "data/chips", packageEntry.pinoutCsv);
     const pinoutCsvText = readFileSync(pinoutCsvPath, "utf8");
-    const pinoutResult = validateLqfpPinoutCsvText(pinoutCsvText, Number(match[1]));
+    const pinoutResult = lqfpMatch
+      ? validateLqfpPinoutCsvText(pinoutCsvText, Number(lqfpMatch[1]))
+      : validateBgaPinoutCsvText(pinoutCsvText, Number(bgaMatch?.[1]));
     const prefix = `${chip.id} ${packageEntry.name}`;
     errors.push(...pinoutResult.errors.map((error) => `${prefix}: ${error}`));
     warnings.push(...pinoutResult.warnings.map((warning) => `${prefix}: ${warning}`));

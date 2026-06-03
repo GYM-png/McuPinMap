@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseBgaPinoutCsvText } from "../src/shared/csv/parseBgaPinoutCsv";
 import { parseGpioAfCsvText } from "../src/shared/csv/parseGpioAfCsv";
 import { parseLqfpPinoutCsvText } from "../src/shared/csv/parseLqfpPinoutCsv";
 import { normalizeChip } from "../src/shared/data/normalizeChip";
@@ -12,12 +13,15 @@ export function buildChipFromManifestEntry(entry: ChipManifestEntry, dataRoot: s
   const packages: PackageLayout[] = [];
 
   for (const packageEntry of entry.packages) {
-    if (!/^LQFP\d+$/.test(packageEntry.name)) {
+    const pinoutCsvText = readFileSync(join(dataRoot, packageEntry.pinoutCsv), "utf8");
+    if (/^LQFP\d+$/.test(packageEntry.name)) {
+      packages.push(parseLqfpPinoutCsvText(pinoutCsvText, packageEntry.name));
       continue;
     }
 
-    const pinoutCsvText = readFileSync(join(dataRoot, packageEntry.pinoutCsv), "utf8");
-    packages.push(parseLqfpPinoutCsvText(pinoutCsvText, packageEntry.name));
+    if (/^BGA\d+$/.test(packageEntry.name)) {
+      packages.push(parseBgaPinoutCsvText(pinoutCsvText, packageEntry.name));
+    }
   }
 
   return normalizeChip(entry, pins, packages);

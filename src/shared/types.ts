@@ -16,16 +16,19 @@ export type Pin = {
 };
 
 export type PackagePin = {
-  padNumber: number;
+  padNumber?: number;
+  ballName?: string;
+  row?: string;
+  column?: number;
   pinName: string;
   pinType?: PinType;
 };
 
 export type PackageLayout = {
   packageName: string;
-  packageType: "LQFP";
+  packageType: "LQFP" | "BGA";
   totalPads: number;
-  orientation?: "pin1-top-left";
+  orientation?: "pin1-top-left" | "a1-top-left";
   pins: PackagePin[];
 };
 

@@ -1,6 +1,9 @@
 node_modules/
 dist/
 generated/
+data/
+external-data/
+.mcupinfunc-cache/
 .vscode-test/
 .superpowers/
 .codegraph/

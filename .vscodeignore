@@ -1,0 +1,17 @@
+.codegraph/**
+.cursor/**
+.superpowers/**
+.vscode/**
+data/**
+generated/**
+external-data/**
+docs/**
+scripts/**
+src/**
+test/**
+AGENTS.md
+tsconfig*.json
+vite.config.ts
+vitest.config.ts
+*.vsix
+node_modules/**

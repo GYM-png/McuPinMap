@@ -96,7 +96,7 @@ docs/superpowers/           设计文档和实施计划
 - 运行时芯片数据计划按用户选择下载，并缓存到 VS Code `ExtensionContext.globalStorageUri` 下。
 - 用户导入本地 CSV 时，仍必须通过共享 validator/parser/normalizer 后再写入本地芯片库。
 - `data/chips/` 如保留在本仓库，只能作为 legacy/dev/test fixture 数据，不能作为发布内置数据源，不能被 VSIX 打包。
-- 在运行时本地芯片库、远程下载和空状态 UI 完成前，不要发布或分发依赖上述排除规则生成的轻量 VSIX；当前中间态仍可能有旧运行时代码读取扩展安装目录中的数据文件。
+- 运行时应通过本地用户芯片库、远程下载或本地 CSV 导入获取芯片数据；不要重新引入对扩展安装目录内置数据文件的发布依赖。
 
 芯片数据路径：
 
@@ -279,11 +279,11 @@ npm run build
 - `build:extension`
 - `build:webview`
 
-轻量 VSIX / 远程数据架构的计划命令：
-- `npm run build:extension-only`：计划用于只构建插件，不构建或读取内置数据。
-- `npm run validate:remote-data`：计划用于校验外部数据仓库。
-- `npm run build:remote-data`：计划用于生成外部数据仓库的远程索引和 chip JSON。
-- `npm run package:light`：计划用于打包不含 chip CSV/JSON 数据的 VSIX。
+轻量 VSIX / 远程数据架构命令：
+- `npm run build:extension-only`：只构建插件，不构建或读取内置数据。
+- `npm run validate:remote-data`：校验外部数据仓库。
+- `npm run build:remote-data`：生成外部数据仓库的远程索引和 chip JSON。
+- `npm run package:light`：打包不含 chip CSV/JSON 数据的 VSIX。
 
 ## VS Code 插件调试规范
 

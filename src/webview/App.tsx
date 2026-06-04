@@ -7,7 +7,7 @@ import { PeripheralFilter } from "./components/PeripheralFilter";
 import { PinDetailPanel } from "./components/PinDetailPanel";
 import { SearchBox } from "./components/SearchBox";
 import { Shell } from "./components/Shell";
-import { usePinMapStore } from "./state/usePinMapStore";
+import { handleExtensionMessage } from "./extensionMessages";
 import { vscode } from "./vscodeApi";
 
 export const App = (): JSX.Element => {
@@ -15,30 +15,11 @@ export const App = (): JSX.Element => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
-      const message = event.data;
-      const store = usePinMapStore.getState();
-
-      switch (message.type) {
-        case "chipsLoaded":
-          store.setChips(message.chips);
-          setError(undefined);
-          break;
-
-        case "chipLoaded":
-          store.setChip(message.chip);
-          store.setAssignments(message.assignments, message.conflicts);
-          setError(undefined);
-          break;
-
-        case "assignmentsUpdated":
-          store.setAssignments(message.assignments, message.conflicts);
-          setError(undefined);
-          break;
-
-        case "error":
-          setError(message.message);
-          break;
-      }
+      handleExtensionMessage(
+        event.data,
+        () => setError(undefined),
+        (message) => setError(message)
+      );
     };
 
     window.addEventListener("message", handleMessage);

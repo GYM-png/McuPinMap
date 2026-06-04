@@ -8,6 +8,7 @@ import type {
 } from "../shared/protocol";
 import type { ChipRepository } from "./chipRepository";
 import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportConfig";
+import { RemoteChipRegistry } from "./remoteChipRegistry";
 
 const ASSIGNMENTS_KEY = "mcupinfunc.assignments";
 
@@ -15,8 +16,9 @@ export const openPinMapPanel = (
   context: vscode.ExtensionContext,
   chipRepository: ChipRepository
 ): void => {
-  const chips = chipRepository.listChips();
-  let selectedChipId = chips[0]?.id;
+  const remoteChipRegistry = new RemoteChipRegistry(context, chipRepository);
+  let installedChips = chipRepository.listChips();
+  let selectedChipId = installedChips[0]?.id;
   let assignments = context.workspaceState.get<Assignment[]>(ASSIGNMENTS_KEY, []);
 
   const panel = vscode.window.createWebviewPanel(
@@ -41,6 +43,17 @@ export const openPinMapPanel = (
   const persistAssignments = async (nextAssignments: Assignment[]): Promise<void> => {
     await context.workspaceState.update(ASSIGNMENTS_KEY, nextAssignments);
     assignments = nextAssignments;
+  };
+
+  const refreshInstalledChips = (): void => {
+    installedChips = chipRepository.listChips();
+    if (!selectedChipId || !installedChips.some((chip) => chip.id === selectedChipId)) {
+      selectedChipId = installedChips[0]?.id;
+    }
+  };
+
+  const postInstalledChipsLoaded = (): void => {
+    postMessage({ type: "installedChipsLoaded", chips: installedChips, selectedChipId });
   };
 
   const postPersistenceError = (error: unknown): void => {
@@ -102,13 +115,56 @@ export const openPinMapPanel = (
     async (message: WebviewToExtensionMessage) => {
       switch (message.type) {
         case "ready":
-          postMessage({ type: "chipsLoaded", chips, selectedChipId });
+          refreshInstalledChips();
+          postMessage({ type: "chipsLoaded", chips: installedChips, selectedChipId });
+          postInstalledChipsLoaded();
           postChipLoaded();
           break;
 
         case "selectChip":
           selectedChipId = message.chipId;
           postChipLoaded();
+          break;
+
+        case "refreshInstalledChips":
+          refreshInstalledChips();
+          postInstalledChipsLoaded();
+          break;
+
+        case "searchRemoteChips":
+          try {
+            postMessage({
+              type: "remoteChipSearchResults",
+              chips: await remoteChipRegistry.searchRemoteChips(message.query)
+            });
+          } catch (error) {
+            postMessage({
+              type: "error",
+              message:
+                error instanceof Error ? error.message : "Unable to search remote chip index."
+            });
+          }
+
+          break;
+
+        case "downloadRemoteChip":
+          postMessage({ type: "chipDownloadStarted", chipId: message.chipId });
+
+          try {
+            const chip = await remoteChipRegistry.downloadRemoteChip(message.chipId);
+            selectedChipId = chip.id;
+            refreshInstalledChips();
+            postInstalledChipsLoaded();
+            postMessage({ type: "chipDownloadCompleted", chip });
+            postChipLoaded();
+          } catch (error) {
+            postMessage({
+              type: "error",
+              message:
+                error instanceof Error ? error.message : "Unable to download selected chip."
+            });
+          }
+
           break;
 
         case "assignFunction": {

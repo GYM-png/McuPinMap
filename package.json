@@ -18,7 +18,17 @@
         "command": "mcupinfunc.openPinMap",
         "title": "McuPinFunc: Open Pin Map"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "McuPinFunc",
+      "properties": {
+        "mcupinfunc.remoteIndexUrl": {
+          "type": "string",
+          "default": "https://raw.githubusercontent.com/GYM-png/mcupinfunc-data/main/index.json",
+          "description": "URL of the remote McuPinFunc chip index JSON."
+        }
+      }
+    }
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('generated',{recursive:true,force:true})\"",

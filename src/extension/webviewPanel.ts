@@ -7,6 +7,7 @@ import type {
   WebviewToExtensionMessage
 } from "../shared/protocol";
 import type { ChipRepository } from "./chipRepository";
+import { importLocalCsvWithDialog } from "./csvImport";
 import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportConfig";
 import { RemoteChipRegistry } from "./remoteChipRegistry";
 
@@ -162,6 +163,51 @@ export const openPinMapPanel = (
               type: "error",
               message:
                 error instanceof Error ? error.message : "Unable to download selected chip."
+            });
+          }
+
+          break;
+
+        case "importLocalCsv":
+          try {
+            const chip = await importLocalCsvWithDialog();
+            if (!chip) {
+              break;
+            }
+
+            const existingChip = installedChips.find(
+              (installedChip) => installedChip.id.toLowerCase() === chip.id.toLowerCase()
+            );
+            if (existingChip) {
+              const selection = await vscode.window.showWarningMessage(
+                `Chip ${chip.displayName} will replace the installed chip ${existingChip.displayName}.`,
+                { modal: true },
+                "Replace"
+              );
+
+              if (selection !== "Replace") {
+                break;
+              }
+            }
+
+            chipRepository.saveImportedChip(chip);
+            selectedChipId = chip.id;
+            refreshInstalledChips();
+            postInstalledChipsLoaded();
+            postMessage({
+              type: "chipImportCompleted",
+              chip: {
+                id: chip.id,
+                displayName: chip.displayName,
+                vendor: chip.vendor,
+                family: chip.family
+              }
+            });
+            postChipLoaded();
+          } catch (error) {
+            postMessage({
+              type: "error",
+              message: error instanceof Error ? error.message : "Unable to import local CSV files."
             });
           }
 

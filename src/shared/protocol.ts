@@ -6,6 +6,7 @@ export type ExtensionToWebviewMessage =
   | { type: "remoteChipSearchResults"; chips: RemoteChipSummary[] }
   | { type: "chipDownloadStarted"; chipId: string }
   | { type: "chipDownloadCompleted"; chip: ChipSummary }
+  | { type: "chipImportCompleted"; chip: ChipSummary }
   | { type: "installedChipsLoaded"; chips: ChipSummary[]; selectedChipId?: string }
   | { type: "chipLoaded"; chip: Chip; assignments: Assignment[]; conflicts: Conflict[] }
   | { type: "assignmentsUpdated"; assignments: Assignment[]; conflicts: Conflict[] }
@@ -16,6 +17,7 @@ export type WebviewToExtensionMessage =
   | { type: "selectChip"; chipId: string }
   | { type: "searchRemoteChips"; query: string }
   | { type: "downloadRemoteChip"; chipId: string }
+  | { type: "importLocalCsv" }
   | { type: "refreshInstalledChips" }
   | { type: "assignFunction"; assignment: Assignment }
   | { type: "removeAssignment"; assignmentId: string }

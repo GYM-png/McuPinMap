@@ -81,5 +81,21 @@ describe("handleExtensionMessage", () => {
     );
     expect(error).toBe("");
     expect(usePinMapStore.getState().chips).toEqual([]);
+
+    error = "previous error";
+    handleExtensionMessage(
+      {
+        type: "chipImportCompleted",
+        chip: {
+          id: "LOCAL_GD32",
+          displayName: "Local GD32",
+          vendor: "Local",
+          family: "Local"
+        }
+      },
+      clearError,
+      setError
+    );
+    expect(error).toBe("");
   });
 });

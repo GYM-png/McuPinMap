@@ -37,6 +37,7 @@ export const handleExtensionMessage = (
     case "remoteChipSearchResults":
     case "chipDownloadStarted":
     case "chipDownloadCompleted":
+    case "chipImportCompleted":
       clearError();
       break;
   }

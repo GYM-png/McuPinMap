@@ -1,0 +1,238 @@
+import * as path from "node:path";
+import type * as vscodeTypes from "vscode";
+import { parseBgaPinoutCsvText } from "../shared/csv/parseBgaPinoutCsv";
+import { parseGpioAfCsvText } from "../shared/csv/parseGpioAfCsv";
+import { parseLqfpPinoutCsvText } from "../shared/csv/parseLqfpPinoutCsv";
+import { parseBgaPackageName } from "../shared/csv/bgaPinout";
+import { validateBgaPinoutCsvText } from "../shared/csv/validateBgaPinoutCsv";
+import { validateGpioAfCsvText } from "../shared/csv/validateGpioAfCsv";
+import { validateLqfpPinoutCsvText } from "../shared/csv/validateLqfpPinoutCsv";
+import { normalizeChip } from "../shared/data/normalizeChip";
+import type { Chip, ChipManifestEntry, PackageLayout } from "../shared/types";
+
+export type CsvImportMetadata = {
+  id: string;
+  displayName: string;
+  vendor: string;
+  family: string;
+};
+
+export type CsvImportPackageInput = {
+  packageName: string;
+  csvText: string;
+};
+
+export type CsvImportInput = CsvImportMetadata & {
+  gpioAfCsvText: string;
+  packages?: CsvImportPackageInput[];
+};
+
+export type CsvImportFile = {
+  filename: string;
+  csvText: string;
+};
+
+type VscodeApi = typeof vscodeTypes;
+
+export function buildImportedChip(input: CsvImportInput): Chip {
+  const gpioAfValidation = validateGpioAfCsvText(input.gpioAfCsvText);
+  if (gpioAfValidation.errors.length > 0) {
+    throw new Error(`Invalid GPIO AF CSV:\n${gpioAfValidation.errors.join("\n")}`);
+  }
+
+  ensureUniquePackageNames(input.packages ?? []);
+
+  const pins = parseGpioAfCsvText(input.gpioAfCsvText);
+  const packages = input.packages?.map(buildPackageLayout) ?? [];
+  const manifestEntry: ChipManifestEntry = {
+    id: input.id,
+    displayName: input.displayName,
+    vendor: input.vendor,
+    family: input.family,
+    gpioAfCsv: "local import",
+    packages: packages.map((packageLayout) => ({
+      name: packageLayout.packageName,
+      pinoutCsv: "local import"
+    })),
+    source: "local import",
+    status: "draft"
+  };
+
+  return normalizeChip(manifestEntry, pins, packages);
+}
+
+export async function importLocalCsvWithDialog(): Promise<Chip | undefined> {
+  const vscode = await import("vscode");
+  const selectedFiles = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: true,
+    filters: {
+      "CSV files": ["csv"]
+    },
+    title: "Import McuPinFunc CSV files"
+  });
+
+  if (!selectedFiles || selectedFiles.length === 0) {
+    return undefined;
+  }
+
+  return importLocalCsvFromUris(vscode, selectedFiles);
+}
+
+export async function importLocalCsvFromUris(
+  vscode: VscodeApi,
+  uris: readonly vscodeTypes.Uri[]
+): Promise<Chip | undefined> {
+  const files = await Promise.all(
+    uris.map(async (uri) => ({
+      filename: path.basename(uri.fsPath),
+      csvText: Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8")
+    }))
+  );
+
+  const gpioAfFile = findSingleGpioAfCsvFile(files);
+  const defaults = inferCsvImportMetadataDefaults(gpioAfFile.filename);
+  const metadata = await promptForImportMetadata(vscode, defaults);
+
+  if (!metadata) {
+    return undefined;
+  }
+
+  const packages: CsvImportPackageInput[] = [];
+  for (const file of files) {
+    if (file === gpioAfFile) {
+      continue;
+    }
+
+    const packageName = await vscode.window.showInputBox({
+      title: "Package name",
+      prompt: `Package name for ${file.filename}`,
+      value: inferPackageNameFromCsvFilename(file.filename) ?? "",
+      validateInput: (nextValue) => (nextValue.trim() ? undefined : "Package name is required.")
+    });
+
+    if (packageName === undefined) {
+      return undefined;
+    }
+
+    packages.push({
+      packageName: packageName.trim().toUpperCase(),
+      csvText: file.csvText
+    });
+  }
+
+  return buildImportedChip({
+    ...metadata,
+    gpioAfCsvText: gpioAfFile.csvText,
+    packages
+  });
+}
+
+export function findSingleGpioAfCsvFile(files: readonly CsvImportFile[]): CsvImportFile {
+  const gpioAfFiles = files.filter((file) => /_GPIO_AF\.csv$/i.test(file.filename));
+
+  if (gpioAfFiles.length !== 1) {
+    const selectedNames = files.map((file) => file.filename).join(", ");
+    throw new Error(
+      `Select exactly one GPIO AF CSV ending _GPIO_AF.csv. Found ${gpioAfFiles.length} in: ${selectedNames}`
+    );
+  }
+
+  return gpioAfFiles[0]!;
+}
+
+export function inferCsvImportMetadataDefaults(gpioAfFilename: string): CsvImportMetadata {
+  const chipStem = path.basename(gpioAfFilename).replace(/_GPIO_AF\.csv$/i, "");
+
+  return {
+    id: chipStem,
+    displayName: chipStem,
+    vendor: "local",
+    family: "local"
+  };
+}
+
+export function inferPackageNameFromCsvFilename(filename: string): string | undefined {
+  const match = /_(LQFP\d+|BGA\d+)_PINOUT\.csv$/i.exec(path.basename(filename));
+  return match?.[1]?.toUpperCase();
+}
+
+function buildPackageLayout(input: CsvImportPackageInput): PackageLayout {
+  const lqfpMatch = /^LQFP(\d+)$/.exec(input.packageName);
+  if (lqfpMatch) {
+    const totalPads = Number(lqfpMatch[1]);
+    const validation = validateLqfpPinoutCsvText(input.csvText, totalPads);
+    throwIfPackageInvalid(input.packageName, validation.errors);
+    return parseLqfpPinoutCsvText(input.csvText, input.packageName);
+  }
+
+  const bgaMatch = /^BGA(\d+)$/.exec(input.packageName);
+  if (bgaMatch) {
+    const totalPads = parseBgaPackageName(input.packageName);
+    const validation = validateBgaPinoutCsvText(input.csvText, totalPads);
+    throwIfPackageInvalid(input.packageName, validation.errors);
+    return parseBgaPinoutCsvText(input.csvText, input.packageName);
+  }
+
+  throw new Error(`Unsupported package ${input.packageName}. Expected LQFP<number> or BGA<number>.`);
+}
+
+async function promptForImportMetadata(
+  vscode: VscodeApi,
+  defaults: CsvImportMetadata
+): Promise<CsvImportMetadata | undefined> {
+  const id = await promptForRequiredText(vscode, "Chip ID", defaults.id);
+  if (id === undefined) {
+    return undefined;
+  }
+
+  const displayName = await promptForRequiredText(vscode, "Display name", defaults.displayName);
+  if (displayName === undefined) {
+    return undefined;
+  }
+
+  const vendor = await promptForRequiredText(vscode, "Vendor", defaults.vendor);
+  if (vendor === undefined) {
+    return undefined;
+  }
+
+  const family = await promptForRequiredText(vscode, "Family", defaults.family);
+  if (family === undefined) {
+    return undefined;
+  }
+
+  return { id, displayName, vendor, family };
+}
+
+async function promptForRequiredText(
+  vscode: VscodeApi,
+  title: string,
+  value: string
+): Promise<string | undefined> {
+  const input = await vscode.window.showInputBox({
+    title,
+    value,
+    validateInput: (nextValue) => (nextValue.trim() ? undefined : `${title} is required.`)
+  });
+
+  return input?.trim();
+}
+
+function throwIfPackageInvalid(packageName: string, errors: string[]): void {
+  if (errors.length > 0) {
+    throw new Error(`Invalid package CSV for ${packageName}:\n${errors.join("\n")}`);
+  }
+}
+
+function ensureUniquePackageNames(packages: readonly CsvImportPackageInput[]): void {
+  const seenPackageNames = new Set<string>();
+  for (const packageInput of packages) {
+    const normalizedPackageName = packageInput.packageName.trim().toUpperCase();
+    if (seenPackageNames.has(normalizedPackageName)) {
+      throw new Error(`Duplicate package ${normalizedPackageName} in selected CSV files.`);
+    }
+
+    seenPackageNames.add(normalizedPackageName);
+  }
+}

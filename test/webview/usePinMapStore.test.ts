@@ -60,4 +60,61 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().mapView).toBe("logical");
     expect(usePinMapStore.getState().selectedPackageName).toBeUndefined();
   });
+
+  it("clears the loaded chip when the installed chip list becomes empty", () => {
+    const store = usePinMapStore.getState();
+
+    store.setChip(createChip([lqfp100]));
+    store.setChips([]);
+
+    expect(usePinMapStore.getState().chip).toBeUndefined();
+    expect(usePinMapStore.getState().selectedChipId).toBeUndefined();
+    expect(usePinMapStore.getState().assignments).toEqual([]);
+  });
+
+  it("tracks remote search and chip data action status", () => {
+    const store = usePinMapStore.getState();
+
+    store.setRemoteQuery("gd32");
+    store.setRemoteSearchLoading();
+    expect(usePinMapStore.getState()).toMatchObject({
+      remoteQuery: "gd32",
+      remoteSearchStatus: "loading"
+    });
+    store.finishRemoteSearch();
+    expect(usePinMapStore.getState().remoteSearchStatus).toBe("idle");
+
+    store.setRemoteSearchLoading();
+
+    store.setRemoteSearchResults("gd32", [
+      {
+        id: "GD32F407",
+        displayName: "GD32F407",
+        vendor: "GigaDevice",
+        family: "GD32F4",
+        packages: ["LQFP100"],
+        status: "stable",
+        chipUrl: "https://raw.githubusercontent.com/GYM-png/mcupinfunc-data/main/chips/gigadevice/gd32f4/gd32f407/chip.json",
+        sourceFiles: []
+      }
+    ]);
+    expect(usePinMapStore.getState().remoteSearchStatus).toBe("ready");
+    expect(usePinMapStore.getState().remoteChips).toHaveLength(1);
+
+    store.setRemoteQuery("h7");
+    store.setRemoteSearchLoading();
+    store.setRemoteSearchResults("gd32", []);
+    expect(usePinMapStore.getState().remoteSearchStatus).toBe("loading");
+    store.finishRemoteSearch();
+    expect(usePinMapStore.getState().remoteSearchStatus).toBe("idle");
+    expect(usePinMapStore.getState().remoteChips).toHaveLength(1);
+
+    store.setDownloadingChipId("GD32F407");
+    store.setImportingCsv(true);
+    store.finishDownload();
+    expect(usePinMapStore.getState().downloadingChipId).toBeUndefined();
+    expect(usePinMapStore.getState().importingCsv).toBe(true);
+    store.finishImport();
+    expect(usePinMapStore.getState().importingCsv).toBe(false);
+  });
 });

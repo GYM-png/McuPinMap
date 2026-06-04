@@ -28,15 +28,6 @@ export const ChipSelector = (): JSX.Element => {
           </option>
         ))}
       </select>
-      <button
-        className="import-csv-action"
-        type="button"
-        onClick={() => {
-          vscode.postMessage({ type: "importLocalCsv" });
-        }}
-      >
-        Import CSV
-      </button>
       {chip ? (
         <p className="meta-line">
           {chip.vendor} / {chip.family} / {chip.pins.length} pins

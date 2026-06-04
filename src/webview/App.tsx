@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ExtensionToWebviewMessage } from "../shared/protocol";
 import { AssignmentPanel } from "./components/AssignmentPanel";
+import { ChipDataPanel } from "./components/ChipDataPanel";
 import { ChipSelector } from "./components/ChipSelector";
 import { LogicalPinMap } from "./components/LogicalPinMap";
 import { PeripheralFilter } from "./components/PeripheralFilter";
@@ -8,10 +9,12 @@ import { PinDetailPanel } from "./components/PinDetailPanel";
 import { SearchBox } from "./components/SearchBox";
 import { Shell } from "./components/Shell";
 import { handleExtensionMessage } from "./extensionMessages";
+import { usePinMapStore } from "./state/usePinMapStore";
 import { vscode } from "./vscodeApi";
 
 export const App = (): JSX.Element => {
   const [error, setError] = useState<string>();
+  const chip = usePinMapStore((state) => state.chip);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
@@ -35,9 +38,14 @@ export const App = (): JSX.Element => {
       error={error}
       sidebar={
         <>
+          <ChipDataPanel />
           <ChipSelector />
-          <SearchBox />
-          <PeripheralFilter />
+          {chip ? (
+            <>
+              <SearchBox />
+              <PeripheralFilter />
+            </>
+          ) : null}
         </>
       }
       detail={

@@ -10,12 +10,12 @@ export const handleExtensionMessage = (
 
   switch (message.type) {
     case "chipsLoaded":
-      store.setChips(message.chips);
+      store.setChips(message.chips, message.selectedChipId);
       clearError();
       break;
 
     case "installedChipsLoaded":
-      store.setChips(message.chips);
+      store.setChips(message.chips, message.selectedChipId);
       clearError();
       break;
 
@@ -31,13 +31,33 @@ export const handleExtensionMessage = (
       break;
 
     case "error":
+      store.finishRemoteSearch();
+      store.finishChipDataActions();
       setError(message.message);
       break;
 
     case "remoteChipSearchResults":
+      store.setRemoteSearchResults(message.query, message.chips);
+      clearError();
+      break;
+
     case "chipDownloadStarted":
+      store.setDownloadingChipId(message.chipId);
+      clearError();
+      break;
+
     case "chipDownloadCompleted":
+      store.finishDownload();
+      clearError();
+      break;
+
+    case "chipImportCancelled":
+      store.finishImport();
+      clearError();
+      break;
+
     case "chipImportCompleted":
+      store.finishImport();
       clearError();
       break;
   }

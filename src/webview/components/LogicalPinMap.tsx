@@ -55,7 +55,7 @@ export const LogicalPinMap = (): JSX.Element => {
   if (!chip) {
     return (
       <section className="panel map-panel empty-map">
-        <p className="empty-state">Waiting for chip data from the extension...</p>
+        <p className="empty-state">Search online chip data or import a local CSV to begin.</p>
       </section>
     );
   }

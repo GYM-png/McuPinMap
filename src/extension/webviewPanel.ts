@@ -19,7 +19,7 @@ export const openPinMapPanel = (
 ): void => {
   const remoteChipRegistry = new RemoteChipRegistry(context, chipRepository);
   let installedChips = chipRepository.listChips();
-  let selectedChipId = installedChips[0]?.id;
+  let selectedChipId: string | undefined = installedChips[0]?.id;
   let assignments = context.workspaceState.get<Assignment[]>(ASSIGNMENTS_KEY, []);
 
   const panel = vscode.window.createWebviewPanel(
@@ -69,7 +69,6 @@ export const openPinMapPanel = (
 
   const postChipLoaded = (): void => {
     if (!selectedChipId) {
-      postMessage({ type: "error", message: "No bundled chips are available." });
       return;
     }
 
@@ -130,12 +129,36 @@ export const openPinMapPanel = (
         case "refreshInstalledChips":
           refreshInstalledChips();
           postInstalledChipsLoaded();
+          postChipLoaded();
           break;
+
+        case "removeInstalledChip": {
+          const chip = installedChips.find((entry) => entry.id === message.chipId);
+          const selection = await vscode.window.showWarningMessage(
+            `Remove ${chip?.displayName ?? message.chipId} from the local chip library?`,
+            { modal: true },
+            "Remove"
+          );
+
+          if (selection !== "Remove") {
+            break;
+          }
+
+          chipRepository.removeChip(message.chipId);
+          if (selectedChipId === message.chipId) {
+            selectedChipId = undefined;
+          }
+          refreshInstalledChips();
+          postInstalledChipsLoaded();
+          postChipLoaded();
+          break;
+        }
 
         case "searchRemoteChips":
           try {
             postMessage({
               type: "remoteChipSearchResults",
+              query: message.query,
               chips: await remoteChipRegistry.searchRemoteChips(message.query)
             });
           } catch (error) {
@@ -172,6 +195,7 @@ export const openPinMapPanel = (
           try {
             const chip = await importLocalCsvWithDialog();
             if (!chip) {
+              postMessage({ type: "chipImportCancelled" });
               break;
             }
 
@@ -186,6 +210,7 @@ export const openPinMapPanel = (
               );
 
               if (selection !== "Replace") {
+                postMessage({ type: "chipImportCancelled" });
                 break;
               }
             }

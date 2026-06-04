@@ -1,5 +1,9 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildChipFromManifestEntry } from "../../scripts/build-data-pack";
+import { buildChipFromManifestEntry, buildDataPack } from "../../scripts/build-data-pack";
 
 describe("buildChipFromManifestEntry", () => {
   it("includes package layouts declared by the manifest", () => {
@@ -35,5 +39,35 @@ describe("buildChipFromManifestEntry", () => {
       orientation: "a1-top-left"
     });
     expect(chip.packages[1].pins.map((pin) => pin.ballName)).toEqual(["A1", "A2", "B1", "B2"]);
+  });
+
+  it("builds generated chip JSON from configurable data and output roots", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-build-"));
+    const dataRoot = join(root, "custom-data");
+    const outputRoot = join(root, "custom-output");
+    const chipDir = join(dataRoot, "gigadevice/gd32f4/gd32f407");
+    mkdirSync(chipDir, { recursive: true });
+
+    writeFileSync(
+      join(chipDir, "GD32F407_GPIO_AF.csv"),
+      [
+        "PinName,AF0,AF1,AF2,AF3,AF4,AF5,AF6,AF7,AF8,AF9,AF10,AF11,AF12,AF13,AF14,AF15",
+        "PA0,GPIOA_0,,,,,,,,,,,,,,,"
+      ].join("\n"),
+      "utf8"
+    );
+    writeFileSync(
+      join(chipDir, "GD32F407_LQFP4_PINOUT.csv"),
+      ["PadNumber,PinName,PinType", "1,PA0,gpio", "2,VDD,power", "3,VSS,ground", "4,NRST,reset"].join("\n"),
+      "utf8"
+    );
+
+    buildDataPack(root, { dataRoot, outputRoot });
+
+    const outputPath = join(outputRoot, "gd32f407.json");
+    expect(existsSync(outputPath)).toBe(true);
+    const chip = JSON.parse(readFileSync(outputPath, "utf8")) as { id: string; packages: unknown[] };
+    expect(chip.id).toBe("GD32F407");
+    expect(chip.packages).toHaveLength(1);
   });
 });

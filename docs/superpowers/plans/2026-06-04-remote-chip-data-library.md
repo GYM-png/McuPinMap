@@ -13,6 +13,7 @@
 ## Scope And Decisions
 
 - The VSIX must not include `data/chips/**`, `generated/chips/**`, or any large chip CSV data.
+- This is a migration plan. After Task 1 excludes data paths, do not publish or distribute a light VSIX until Task 4 through Task 8 prove runtime loading no longer depends on extension-installed chip data.
 - The main McuPinFunc repository may keep a local data checkout under `external-data/mcupinfunc-data/`, but `.gitignore` must ignore it.
 - The data repository stores all source CSVs in one GitHub repository.
 - Users download only the chip they select, not the whole repository.
@@ -214,6 +215,8 @@ data/**
 generated/**
 external-data/**
 ```
+
+Important migration note: after this step, a VSIX built before the runtime local library and remote download flow are complete may open without the data files the current runtime expects. Do not publish or distribute a light VSIX until Task 8 passes.
 
 - [ ] **Step 7: Verify status**
 

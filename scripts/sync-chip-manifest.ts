@@ -8,10 +8,15 @@ type ScannedChip = {
   familySlug: string;
   chipSlug: string;
   gpioAfCsv: string;
+  sourcePath: string;
   packages: Array<{
     name: string;
     pinoutCsv: string;
   }>;
+};
+
+export type SyncChipManifestOptions = {
+  dataRoot?: string;
 };
 
 const GPIO_AF_FILE = /^(.+)_GPIO_AF\.csv$/;
@@ -31,6 +36,31 @@ function toDisplayName(slug: string): string {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("");
+}
+
+function readChipPathParts(relativePath: string): { vendorSlug: string; familySlug: string; chipSlug: string } | undefined {
+  const parts = relativePath.split("/");
+  if (parts[0] === "chips") {
+    if (parts.length !== 6 || parts[4] !== "source") {
+      return undefined;
+    }
+
+    return {
+      vendorSlug: parts[1],
+      familySlug: parts[2],
+      chipSlug: parts[3]
+    };
+  }
+
+  if (parts.length >= 4) {
+    return {
+      vendorSlug: parts[0],
+      familySlug: parts[1],
+      chipSlug: parts[2]
+    };
+  }
+
+  return undefined;
 }
 
 function readManifest(manifestPath: string): ChipManifest {
@@ -87,14 +117,12 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
   return gpioFiles
     .map((gpioAfPath): ScannedChip | undefined => {
       const relativePath = toManifestPath(dataRoot, gpioAfPath);
-      const parts = relativePath.split("/");
-      if (parts.length < 4) {
-        return undefined;
-      }
+      const chipPathParts = readChipPathParts(relativePath);
 
-      const fileName = parts[parts.length - 1];
+      const pathParts = relativePath.split("/");
+      const fileName = pathParts[pathParts.length - 1] ?? "";
       const match = GPIO_AF_FILE.exec(fileName);
-      if (!match) {
+      if (!match || !chipPathParts) {
         return undefined;
       }
 
@@ -123,10 +151,11 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
 
       return {
         id,
-        vendorSlug: parts[0],
-        familySlug: parts[1],
-        chipSlug: parts[2],
+        vendorSlug: chipPathParts.vendorSlug,
+        familySlug: chipPathParts.familySlug,
+        chipSlug: chipPathParts.chipSlug,
         gpioAfCsv: relativePath,
+        sourcePath: relativePath,
         packages
       };
     })
@@ -142,13 +171,13 @@ function mergeChip(scanned: ScannedChip, existing?: ChipManifestEntry): ChipMani
     displayName: existing?.displayName ?? scanned.id,
     gpioAfCsv: scanned.gpioAfCsv,
     packages: scanned.packages,
-    source: existing?.source ?? `${scanned.id} GPIO AF CSV scanned from data/chips/${scanned.vendorSlug}/${scanned.familySlug}/${scanned.chipSlug}`,
+    source: existing?.source ?? `${scanned.id} GPIO AF CSV scanned from ${scanned.sourcePath}`,
     status: existing?.status ?? "draft"
   };
 }
 
-export function syncChipManifest(root: string): ChipManifest {
-  const dataRoot = join(root, "data/chips");
+export function syncChipManifest(root: string, options: SyncChipManifestOptions = {}): ChipManifest {
+  const dataRoot = options.dataRoot ?? join(root, "data/chips");
   const manifestPath = join(dataRoot, "manifest.json");
   const existingManifest = readManifest(manifestPath);
   const existingById = new Map(existingManifest.chips.map((chip) => [chip.id, chip]));

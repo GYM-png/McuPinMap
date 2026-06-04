@@ -89,13 +89,14 @@ docs/superpowers/           设计文档和实施计划
 
 ## 数据包规范
 
-发布架构：
+目标发布架构：
 - VSIX 不发布 `data/**`、`generated/**` 或 `external-data/**`。
 - 所有 curated chip CSV 源数据维护在外部 GitHub 数据仓库 `GYM-png/mcupinfunc-data`。
 - 主仓库中的本地 checkout 路径为 `external-data/mcupinfunc-data/`，该目录必须被 `.gitignore` 忽略。
-- 运行时芯片数据按用户选择下载，并缓存到 VS Code `ExtensionContext.globalStorageUri` 下。
+- 运行时芯片数据计划按用户选择下载，并缓存到 VS Code `ExtensionContext.globalStorageUri` 下。
 - 用户导入本地 CSV 时，仍必须通过共享 validator/parser/normalizer 后再写入本地芯片库。
 - `data/chips/` 如保留在本仓库，只能作为 legacy/dev/test fixture 数据，不能作为发布内置数据源，不能被 VSIX 打包。
+- 在运行时本地芯片库、远程下载和空状态 UI 完成前，不要发布或分发依赖上述排除规则生成的轻量 VSIX；当前中间态仍可能有旧运行时代码读取扩展安装目录中的数据文件。
 
 芯片数据路径：
 

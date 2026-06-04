@@ -7,6 +7,11 @@ import { normalizeChip } from "../src/shared/data/normalizeChip";
 import type { Chip, ChipManifest, ChipManifestEntry, PackageLayout } from "../src/shared/types";
 import { syncChipManifest } from "./sync-chip-manifest";
 
+export type BuildDataPackOptions = {
+  dataRoot?: string;
+  outputRoot?: string;
+};
+
 export function buildChipFromManifestEntry(entry: ChipManifestEntry, dataRoot: string): Chip {
   const csvText = readFileSync(join(dataRoot, entry.gpioAfCsv), "utf8");
   const pins = parseGpioAfCsvText(csvText);
@@ -27,11 +32,25 @@ export function buildChipFromManifestEntry(entry: ChipManifestEntry, dataRoot: s
   return normalizeChip(entry, pins, packages);
 }
 
-export function buildDataPack(root: string): void {
-  const dataRoot = join(root, "data/chips");
-  syncChipManifest(root);
+function readOption(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  if (index === -1) {
+    return undefined;
+  }
+
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`Missing value for ${name}`);
+  }
+
+  return value;
+}
+
+export function buildDataPack(root: string, options: BuildDataPackOptions = {}): void {
+  const dataRoot = options.dataRoot ?? join(root, "data/chips");
+  syncChipManifest(root, { dataRoot });
   const manifest = JSON.parse(readFileSync(join(dataRoot, "manifest.json"), "utf8")) as ChipManifest;
-  const outputDir = join(root, "generated/chips");
+  const outputDir = options.outputRoot ?? join(root, "generated/chips");
   mkdirSync(outputDir, { recursive: true });
 
   for (const entry of manifest.chips) {
@@ -43,5 +62,9 @@ export function buildDataPack(root: string): void {
 }
 
 if (require.main === module) {
-  buildDataPack(process.cwd());
+  const args = process.argv.slice(2);
+  buildDataPack(process.cwd(), {
+    dataRoot: readOption(args, "--data-root"),
+    outputRoot: readOption(args, "--output-root")
+  });
 }

@@ -77,4 +77,57 @@ describe("syncChipManifest", () => {
     const written = JSON.parse(readFileSync(join(dataRoot, "manifest.json"), "utf8")) as ChipManifest;
     expect(written).toEqual(manifest);
   });
+
+  it("writes manifest under a configurable data root", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-manifest-custom-"));
+    const dataRoot = join(root, "custom-data");
+    const chipDir = join(dataRoot, "gigadevice/gd32f4/gd32f407");
+    mkdirSync(chipDir, { recursive: true });
+
+    writeFileSync(join(chipDir, "GD32F407_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
+    writeFileSync(join(chipDir, "GD32F407_LQFP4_PINOUT.csv"), "PadNumber,PinName,PinType\n", "utf8");
+
+    const manifest = syncChipManifest(root, { dataRoot });
+
+    expect(manifest.chips).toHaveLength(1);
+    expect(manifest.chips[0]).toMatchObject({
+      id: "GD32F407",
+      gpioAfCsv: "gigadevice/gd32f4/gd32f407/GD32F407_GPIO_AF.csv",
+      packages: [
+        {
+          name: "LQFP4",
+          pinoutCsv: "gigadevice/gd32f4/gd32f407/GD32F407_LQFP4_PINOUT.csv"
+        }
+      ]
+    });
+    expect(readFileSync(join(dataRoot, "manifest.json"), "utf8")).toContain("\"GD32F407\"");
+  });
+
+  it("scans the remote data repo source layout without falling back to legacy path parsing", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-manifest-remote-"));
+    const dataRoot = join(root, "remote-data");
+    const chipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f407/source");
+    const invalidChipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f405");
+    mkdirSync(chipDir, { recursive: true });
+    mkdirSync(invalidChipDir, { recursive: true });
+
+    writeFileSync(join(chipDir, "GD32F407_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
+    writeFileSync(join(chipDir, "GD32F407_LQFP4_PINOUT.csv"), "PadNumber,PinName,PinType\n", "utf8");
+    writeFileSync(join(invalidChipDir, "GD32F405_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
+
+    const manifest = syncChipManifest(root, { dataRoot });
+
+    expect(manifest.chips.map((chip) => chip.id)).toEqual(["GD32F407"]);
+    expect(manifest.chips[0]).toMatchObject({
+      gpioAfCsv: "chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv",
+      source:
+        "GD32F407 GPIO AF CSV scanned from chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv",
+      packages: [
+        {
+          name: "LQFP4",
+          pinoutCsv: "chips/gigadevice/gd32f4/gd32f407/source/GD32F407_LQFP4_PINOUT.csv"
+        }
+      ]
+    });
+  });
 });

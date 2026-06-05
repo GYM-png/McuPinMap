@@ -3,12 +3,13 @@ import type * as vscodeTypes from "vscode";
 import { parseBgaPinoutCsvText } from "../shared/csv/parseBgaPinoutCsv";
 import { parseGpioAfCsvText } from "../shared/csv/parseGpioAfCsv";
 import { parseLqfpPinoutCsvText } from "../shared/csv/parseLqfpPinoutCsv";
+import { parsePinoutFunctionCsvText } from "../shared/csv/pinoutFunctionCsv";
 import { parseBgaPackageName } from "../shared/csv/bgaPinout";
 import { validateBgaPinoutCsvText } from "../shared/csv/validateBgaPinoutCsv";
 import { validateGpioAfCsvText } from "../shared/csv/validateGpioAfCsv";
 import { validateLqfpPinoutCsvText } from "../shared/csv/validateLqfpPinoutCsv";
 import { normalizeChip } from "../shared/data/normalizeChip";
-import type { Chip, ChipManifestEntry, PackageLayout } from "../shared/types";
+import type { Chip, ChipManifestEntry, FunctionSource, PackageLayout } from "../shared/types";
 
 export type CsvImportMetadata = {
   id: string;
@@ -23,7 +24,8 @@ export type CsvImportPackageInput = {
 };
 
 export type CsvImportInput = CsvImportMetadata & {
-  gpioAfCsvText: string;
+  functionSource?: FunctionSource;
+  gpioAfCsvText?: string;
   packages?: CsvImportPackageInput[];
 };
 
@@ -35,21 +37,32 @@ export type CsvImportFile = {
 type VscodeApi = typeof vscodeTypes;
 
 export function buildImportedChip(input: CsvImportInput): Chip {
-  const gpioAfValidation = validateGpioAfCsvText(input.gpioAfCsvText);
-  if (gpioAfValidation.errors.length > 0) {
-    throw new Error(`Invalid GPIO AF CSV:\n${gpioAfValidation.errors.join("\n")}`);
+  const functionSource = input.functionSource ?? (input.gpioAfCsvText ? "gpio-af-csv" : "pinout-csv");
+  if (functionSource === "gpio-af-csv") {
+    if (!input.gpioAfCsvText) {
+      throw new Error("GPIO AF CSV text is required for gpio-af-csv imports.");
+    }
+
+    const gpioAfValidation = validateGpioAfCsvText(input.gpioAfCsvText);
+    if (gpioAfValidation.errors.length > 0) {
+      throw new Error(`Invalid GPIO AF CSV:\n${gpioAfValidation.errors.join("\n")}`);
+    }
   }
 
   ensureUniquePackageNames(input.packages ?? []);
 
-  const pins = parseGpioAfCsvText(input.gpioAfCsvText);
   const packages = input.packages?.map(buildPackageLayout) ?? [];
+  const pins =
+    functionSource === "pinout-csv"
+      ? mergePins((input.packages ?? []).flatMap((packageInput) => parsePinoutFunctionCsvText(packageInput.csvText)))
+      : parseGpioAfCsvText(input.gpioAfCsvText ?? "");
   const manifestEntry: ChipManifestEntry = {
     id: input.id,
     displayName: input.displayName,
     vendor: input.vendor,
     family: input.family,
-    gpioAfCsv: "local import",
+    functionSource,
+    ...(functionSource === "gpio-af-csv" ? { gpioAfCsv: "local import" } : {}),
     packages: packages.map((packageLayout) => ({
       name: packageLayout.packageName,
       pinoutCsv: "local import"
@@ -92,7 +105,13 @@ export async function importLocalCsvFromUris(
   );
 
   const gpioAfFile = findSingleGpioAfCsvFile(files);
-  const defaults = inferCsvImportMetadataDefaults(gpioAfFile.filename);
+  const packageFiles = gpioAfFile ? files.filter((file) => file !== gpioAfFile) : files.filter(isPinoutCsvFile);
+  if (!gpioAfFile && packageFiles.length === 0) {
+    const selectedNames = files.map((file) => file.filename).join(", ");
+    throw new Error(`Select at least one package pinout CSV ending _PINOUT.csv. Found: ${selectedNames}`);
+  }
+
+  const defaults = inferCsvImportMetadataDefaults((gpioAfFile ?? packageFiles[0]!).filename);
   const metadata = await promptForImportMetadata(vscode, defaults);
 
   if (!metadata) {
@@ -100,11 +119,7 @@ export async function importLocalCsvFromUris(
   }
 
   const packages: CsvImportPackageInput[] = [];
-  for (const file of files) {
-    if (file === gpioAfFile) {
-      continue;
-    }
-
+  for (const file of packageFiles) {
     const packageName = await vscode.window.showInputBox({
       title: "Package name",
       prompt: `Package name for ${file.filename}`,
@@ -124,26 +139,30 @@ export async function importLocalCsvFromUris(
 
   return buildImportedChip({
     ...metadata,
-    gpioAfCsvText: gpioAfFile.csvText,
+    functionSource: gpioAfFile ? "gpio-af-csv" : "pinout-csv",
+    gpioAfCsvText: gpioAfFile?.csvText,
     packages
   });
 }
 
-export function findSingleGpioAfCsvFile(files: readonly CsvImportFile[]): CsvImportFile {
+export function findSingleGpioAfCsvFile(files: readonly CsvImportFile[]): CsvImportFile | undefined {
   const gpioAfFiles = files.filter((file) => /_GPIO_AF\.csv$/i.test(file.filename));
 
-  if (gpioAfFiles.length !== 1) {
+  if (gpioAfFiles.length > 1) {
     const selectedNames = files.map((file) => file.filename).join(", ");
     throw new Error(
-      `Select exactly one GPIO AF CSV ending _GPIO_AF.csv. Found ${gpioAfFiles.length} in: ${selectedNames}`
+      `Select at most one GPIO AF CSV ending _GPIO_AF.csv. Found ${gpioAfFiles.length} in: ${selectedNames}`
     );
   }
 
-  return gpioAfFiles[0]!;
+  return gpioAfFiles[0];
 }
 
-export function inferCsvImportMetadataDefaults(gpioAfFilename: string): CsvImportMetadata {
-  const chipStem = path.basename(gpioAfFilename).replace(/_GPIO_AF\.csv$/i, "");
+export function inferCsvImportMetadataDefaults(filename: string): CsvImportMetadata {
+  const chipStem = path
+    .basename(filename)
+    .replace(/_GPIO_AF\.csv$/i, "")
+    .replace(/_(LQFP\d+|BGA\d+)_PINOUT\.csv$/i, "");
 
   return {
     id: chipStem,
@@ -156,6 +175,10 @@ export function inferCsvImportMetadataDefaults(gpioAfFilename: string): CsvImpor
 export function inferPackageNameFromCsvFilename(filename: string): string | undefined {
   const match = /_(LQFP\d+|BGA\d+)_PINOUT\.csv$/i.exec(path.basename(filename));
   return match?.[1]?.toUpperCase();
+}
+
+function isPinoutCsvFile(file: CsvImportFile): boolean {
+  return /_PINOUT\.csv$/i.test(file.filename);
 }
 
 function buildPackageLayout(input: CsvImportPackageInput): PackageLayout {
@@ -235,4 +258,23 @@ function ensureUniquePackageNames(packages: readonly CsvImportPackageInput[]): v
 
     seenPackageNames.add(normalizedPackageName);
   }
+}
+
+function mergePins(pins: Chip["pins"]): Chip["pins"] {
+  const byName = new Map<string, Chip["pins"][number]>();
+  for (const pin of pins) {
+    const existing = byName.get(pin.name);
+    if (!existing) {
+      byName.set(pin.name, { ...pin, functions: [...pin.functions] });
+      continue;
+    }
+
+    for (const fn of pin.functions) {
+      if (!existing.functions.some((existingFn) => existingFn.af === fn.af && existingFn.raw === fn.raw)) {
+        existing.functions.push(fn);
+      }
+    }
+  }
+
+  return [...byName.values()];
 }

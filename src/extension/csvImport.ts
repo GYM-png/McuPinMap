@@ -115,7 +115,12 @@ export async function importLocalCsvFromUris(
   );
 
   const gpioAfFile = findSingleGpioAfCsvFile(files);
-  const packageFiles = gpioAfFile ? files.filter((file) => file !== gpioAfFile) : files.filter(isPinoutCsvFile);
+  const unsupportedFiles = files.filter((file) => file !== gpioAfFile && !isPackagePinoutCsvFile(file));
+  if (unsupportedFiles.length > 0) {
+    throwUnsupportedCsvSelection(unsupportedFiles[0]!.filename);
+  }
+
+  const packageFiles = files.filter(isPackagePinoutCsvFile);
   if (!gpioAfFile && packageFiles.length === 0) {
     const selectedNames = files.map((file) => file.filename).join(", ");
     throw new Error(`Select at least one package pinout CSV ending _PINOUT.csv. Found: ${selectedNames}`);
@@ -187,8 +192,14 @@ export function inferPackageNameFromCsvFilename(filename: string): string | unde
   return match?.[1]?.toUpperCase();
 }
 
-function isPinoutCsvFile(file: CsvImportFile): boolean {
-  return /_PINOUT\.csv$/i.test(file.filename);
+function isPackagePinoutCsvFile(file: CsvImportFile): boolean {
+  return /_(LQFP\d+|BGA\d+)_PINOUT\.csv$/i.test(file.filename);
+}
+
+function throwUnsupportedCsvSelection(filename: string): never {
+  throw new Error(
+    `Unsupported CSV selection ${filename}. Select _GPIO_AF.csv and optional _PINOUT.csv files.`
+  );
 }
 
 function buildPackageLayout(input: CsvImportPackageInput): PackageLayout {

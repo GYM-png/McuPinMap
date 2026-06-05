@@ -307,4 +307,52 @@ describe("CSV import dialog helpers", () => {
       })
     );
   });
+
+  it("rejects unsupported files selected with a GPIO AF CSV before prompting for package names", async () => {
+    const vscode = {
+      workspace: {
+        fs: {
+          readFile: vi.fn(async (uri: { fsPath: string }) =>
+            Buffer.from(
+              uri.fsPath.endsWith("_GPIO_AF.csv")
+                ? [gpioAfHeader, "PA0,,,,,,,,,,,,,,,,"].join("\n")
+                : "not,a,pinout",
+              "utf8"
+            )
+          )
+        }
+      },
+      window: {
+        showInputBox: vi.fn()
+      }
+    };
+
+    await expect(
+      importLocalCsvFromUris(vscode as never, [
+        { fsPath: "D:\\imports\\GD32F407_GPIO_AF.csv" },
+        { fsPath: "D:\\imports\\notes.csv" }
+      ] as never)
+    ).rejects.toThrow("Unsupported CSV selection notes.csv. Select _GPIO_AF.csv and optional _PINOUT.csv files.");
+
+    expect(vscode.window.showInputBox).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported files selected without a GPIO AF CSV before prompting", async () => {
+    const vscode = {
+      workspace: {
+        fs: {
+          readFile: vi.fn(async () => Buffer.from("not,a,pinout", "utf8"))
+        }
+      },
+      window: {
+        showInputBox: vi.fn()
+      }
+    };
+
+    await expect(
+      importLocalCsvFromUris(vscode as never, [{ fsPath: "D:\\imports\\notes.csv" }] as never)
+    ).rejects.toThrow("Unsupported CSV selection notes.csv. Select _GPIO_AF.csv and optional _PINOUT.csv files.");
+
+    expect(vscode.window.showInputBox).not.toHaveBeenCalled();
+  });
 });

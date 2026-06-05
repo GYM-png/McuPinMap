@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parseBgaPinoutCsvText } from "../src/shared/csv/parseBgaPinoutCsv";
 import { parseGpioAfCsvText } from "../src/shared/csv/parseGpioAfCsv";
 import { parseLqfpPinoutCsvText } from "../src/shared/csv/parseLqfpPinoutCsv";
+import { parsePinoutFunctionCsvText } from "../src/shared/csv/pinoutFunctionCsv";
 import { normalizeChip } from "../src/shared/data/normalizeChip";
 import type { Chip, ChipManifest, ChipManifestEntry, PackageLayout } from "../src/shared/types";
 import { syncChipManifest } from "./sync-chip-manifest";
@@ -13,12 +14,12 @@ export type BuildDataPackOptions = {
 };
 
 export function buildChipFromManifestEntry(entry: ChipManifestEntry, dataRoot: string): Chip {
-  const csvText = readFileSync(join(dataRoot, entry.gpioAfCsv), "utf8");
-  const pins = parseGpioAfCsvText(csvText);
   const packages: PackageLayout[] = [];
+  const pinoutCsvTexts: string[] = [];
 
   for (const packageEntry of entry.packages) {
     const pinoutCsvText = readFileSync(join(dataRoot, packageEntry.pinoutCsv), "utf8");
+    pinoutCsvTexts.push(pinoutCsvText);
     if (/^LQFP\d+$/.test(packageEntry.name)) {
       packages.push(parseLqfpPinoutCsvText(pinoutCsvText, packageEntry.name));
       continue;
@@ -29,7 +30,40 @@ export function buildChipFromManifestEntry(entry: ChipManifestEntry, dataRoot: s
     }
   }
 
+  const functionSource = entry.functionSource ?? "gpio-af-csv";
+  const pins =
+    functionSource === "pinout-csv"
+      ? mergePins(pinoutCsvTexts.flatMap(parsePinoutFunctionCsvText))
+      : parseGpioAfCsvText(readGpioAfCsvText(entry, dataRoot));
+
   return normalizeChip(entry, pins, packages);
+}
+
+function readGpioAfCsvText(entry: ChipManifestEntry, dataRoot: string): string {
+  if (!entry.gpioAfCsv) {
+    throw new Error(`Chip ${entry.id} must reference a GPIO AF CSV when functionSource is gpio-af-csv.`);
+  }
+
+  return readFileSync(join(dataRoot, entry.gpioAfCsv), "utf8");
+}
+
+function mergePins(pins: Chip["pins"]): Chip["pins"] {
+  const byName = new Map<string, Chip["pins"][number]>();
+  for (const pin of pins) {
+    const existing = byName.get(pin.name);
+    if (!existing) {
+      byName.set(pin.name, { ...pin, functions: [...pin.functions] });
+      continue;
+    }
+
+    for (const fn of pin.functions) {
+      if (!existing.functions.some((existingFn) => existingFn.af === fn.af && existingFn.raw === fn.raw)) {
+        existing.functions.push(fn);
+      }
+    }
+  }
+
+  return [...byName.values()];
 }
 
 function readOption(args: string[], name: string): string | undefined {

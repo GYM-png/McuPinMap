@@ -41,6 +41,49 @@ describe("buildChipFromManifestEntry", () => {
     expect(chip.packages[1].pins.map((pin) => pin.ballName)).toEqual(["A1", "A2", "B1", "B2"]);
   });
 
+  it("builds pinout-sourced chips from Alternate and Remap columns", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-pinout-source-"));
+    const dataRoot = join(root, "data");
+    mkdirSync(dataRoot, { recursive: true });
+
+    writeFileSync(
+      join(dataRoot, "GD32F103_LQFP4_PINOUT.csv"),
+      [
+        "PadNumber,PinName,PinType,Alternate,Remap",
+        "1,PA4,gpio,SPI0_NSS/USART1_CK,SPI2_NSS",
+        "2,PA5,gpio,SPI0_SCK,",
+        "3,VDD,power,,",
+        "4,VSS,ground,,"
+      ].join("\n"),
+      "utf8"
+    );
+
+    const chip = buildChipFromManifestEntry(
+      {
+        id: "GD32F103",
+        vendor: "GigaDevice",
+        family: "GD32F1",
+        displayName: "GD32F103",
+        functionSource: "pinout-csv",
+        packages: [{ name: "LQFP4", pinoutCsv: "GD32F103_LQFP4_PINOUT.csv" }],
+        source: "fixture",
+        status: "draft"
+      },
+      dataRoot
+    );
+
+    const pa4 = chip.pins.find((pin) => pin.name === "PA4");
+    expect(chip.functionSource).toBe("pinout-csv");
+    expect(pa4?.port).toBe("A");
+    expect(pa4?.functions.map((fn) => `${fn.af}:${fn.raw}`)).toEqual([
+      "GPIO:GPIO_IN",
+      "GPIO:GPIO_OUT",
+      "ALT:SPI0_NSS",
+      "ALT:USART1_CK",
+      "REMAP:SPI2_NSS"
+    ]);
+  });
+
   it("builds generated chip JSON from configurable data and output roots", () => {
     const root = mkdtempSync(join(tmpdir(), "mcupinfunc-build-"));
     const dataRoot = join(root, "custom-data");

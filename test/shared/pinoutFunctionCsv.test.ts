@@ -14,7 +14,7 @@ describe("parsePinoutFunctionCsvText", () => {
     expect(pins).toEqual([
       {
         name: "PA4",
-        port: "PA",
+        port: "A",
         number: 4,
         functions: [
           { af: "ALT", raw: "SPI0_NSS", peripheral: "SPI0", signal: "NSS", aliases: ["SPI0_NSS"] },
@@ -27,7 +27,7 @@ describe("parsePinoutFunctionCsvText", () => {
       },
       {
         name: "PA5",
-        port: "PA",
+        port: "A",
         number: 5,
         functions: [
           { af: "ALT", raw: "SPI0_SCK", peripheral: "SPI0", signal: "SCK", aliases: ["SPI0_SCK"] },
@@ -61,6 +61,7 @@ describe("parsePinoutFunctionCsvText", () => {
     );
 
     expect(pins).toHaveLength(1);
+    expect(pins[0]).toMatchObject({ name: "PB3", port: "B", number: 3 });
     expect(pins[0]?.functions.map((fn) => `${fn.af}:${fn.raw}`)).toEqual([
       "ALT:SPI2_SCK",
       "REMAP:PB3",

@@ -9,7 +9,7 @@ type PinoutFunctionRecord = {
   Remap?: string;
 };
 
-const GPIO_PIN_NAME = /^(P[A-Z])(\d{1,2})$/;
+const GPIO_PIN_NAME = /^P([A-Z])(\d{1,2})$/;
 
 export function parsePinoutFunctionCsvText(csvText: string): Pin[] {
   const records = parse(csvText, {

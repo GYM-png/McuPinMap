@@ -123,6 +123,31 @@ describe("buildImportedChip", () => {
     expect(chip.pins.find((pin) => pin.name === "PA4")?.functions.map((fn) => fn.raw)).toContain("SPI2_NSS");
   });
 
+  it("rejects pinout CSV imports without package CSVs", () => {
+    expect(() =>
+      buildImportedChip({
+        ...metadata,
+        functionSource: "pinout-csv"
+      })
+    ).toThrow("At least one package pinout CSV is required for pinout-csv imports.");
+  });
+
+  it("rejects explicit pinout CSV imports with GPIO AF CSV text", () => {
+    expect(() =>
+      buildImportedChip({
+        ...metadata,
+        functionSource: "pinout-csv",
+        gpioAfCsvText: [gpioAfHeader, "PA0,,,,,,,,,,,,,,,,"].join("\n"),
+        packages: [
+          {
+            packageName: "LQFP3",
+            csvText: ["PadNumber,PinName,PinType", "1,PA0,gpio", "2,VDD,power", "3,VSS,ground"].join("\n")
+          }
+        ]
+      })
+    ).toThrow("GPIO AF CSV cannot be used with pinout-csv imports.");
+  });
+
   it("rejects invalid GPIO AF CSV with a validator message", () => {
     expect(() =>
       buildImportedChip({

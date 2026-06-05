@@ -49,6 +49,16 @@ export function buildImportedChip(input: CsvImportInput): Chip {
     }
   }
 
+  if (functionSource === "pinout-csv") {
+    if (input.gpioAfCsvText) {
+      throw new Error("GPIO AF CSV cannot be used with pinout-csv imports.");
+    }
+
+    if ((input.packages ?? []).length === 0) {
+      throw new Error("At least one package pinout CSV is required for pinout-csv imports.");
+    }
+  }
+
   ensureUniquePackageNames(input.packages ?? []);
 
   const packages = input.packages?.map(buildPackageLayout) ?? [];

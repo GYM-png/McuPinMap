@@ -179,12 +179,15 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
 }
 
 function mergeChip(scanned: ScannedChip, existing?: ChipManifestEntry): ChipManifestEntry {
+  const functionSource =
+    scanned.functionSource === "pinout-csv" || existing?.functionSource === "pinout-csv" ? "pinout-csv" : undefined;
+
   return {
     id: existing?.id ?? scanned.id,
     vendor: existing?.vendor ?? toDisplayName(scanned.vendorSlug),
     family: existing?.family ?? scanned.familySlug.toUpperCase(),
     displayName: existing?.displayName ?? scanned.id,
-    functionSource: scanned.functionSource,
+    functionSource,
     gpioAfCsv: scanned.gpioAfCsv,
     packages: scanned.packages,
     source: existing?.source ?? `${scanned.id} ${scanned.functionSource} CSV scanned from ${scanned.sourcePath}`,

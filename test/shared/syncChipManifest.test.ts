@@ -59,6 +59,7 @@ describe("syncChipManifest", () => {
         }
       ]
     });
+    expect(manifest.chips[0]?.functionSource).toBeUndefined();
     expect(manifest.chips[1]).toMatchObject({
       id: "GD32H759",
       vendor: "GigaDevice",
@@ -73,6 +74,7 @@ describe("syncChipManifest", () => {
       ],
       status: "draft"
     });
+    expect(manifest.chips[1]?.functionSource).toBeUndefined();
 
     const written = JSON.parse(readFileSync(join(dataRoot, "manifest.json"), "utf8")) as ChipManifest;
     expect(written).toEqual(manifest);

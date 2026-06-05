@@ -44,6 +44,69 @@ describe("validateManifest", () => {
     expect(result.errors).toContain("Chip GD32F407 must reference a GPIO AF CSV named GD32F407_GPIO_AF.csv.");
   });
 
+  it("accepts a pinout-csv chip without GPIO AF CSV", () => {
+    const result = validateManifest({
+      schemaVersion: 1,
+      dataVersion: "2026-06-05",
+      chips: [
+        {
+          id: "GD32F103",
+          vendor: "GigaDevice",
+          family: "GD32F1",
+          displayName: "GD32F103",
+          functionSource: "pinout-csv",
+          packages: [{ name: "LQFP100", pinoutCsv: "chips/gigadevice/gd32f1/gd32f103/source/GD32F103_LQFP100_PINOUT.csv" }],
+          source: "fixture",
+          status: "draft"
+        }
+      ]
+    });
+
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects a gpio-af-csv chip without GPIO AF CSV", () => {
+    const result = validateManifest({
+      schemaVersion: 1,
+      dataVersion: "2026-06-05",
+      chips: [
+        {
+          id: "GD32F407",
+          vendor: "GigaDevice",
+          family: "GD32F4",
+          displayName: "GD32F407",
+          functionSource: "gpio-af-csv",
+          packages: [],
+          source: "fixture",
+          status: "draft"
+        }
+      ]
+    });
+
+    expect(result.errors).toContain("Chip GD32F407 must reference a GPIO AF CSV named GD32F407_GPIO_AF.csv.");
+  });
+
+  it("rejects an unknown functionSource", () => {
+    const result = validateManifest({
+      schemaVersion: 1,
+      dataVersion: "2026-06-05",
+      chips: [
+        {
+          id: "GD32F103",
+          vendor: "GigaDevice",
+          family: "GD32F1",
+          displayName: "GD32F103",
+          functionSource: "legacy",
+          packages: [],
+          source: "fixture",
+          status: "draft"
+        }
+      ]
+    });
+
+    expect(result.errors).toContain("Chip GD32F103 functionSource must be gpio-af-csv or pinout-csv.");
+  });
+
   it("returns errors for null input", () => {
     const result = validateManifest(null);
 

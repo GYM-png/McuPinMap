@@ -7,7 +7,8 @@ type ScannedChip = {
   vendorSlug: string;
   familySlug: string;
   chipSlug: string;
-  gpioAfCsv: string;
+  functionSource: "gpio-af-csv" | "pinout-csv";
+  gpioAfCsv?: string;
   sourcePath: string;
   packages: Array<{
     name: string;
@@ -76,7 +77,7 @@ function readManifest(manifestPath: string): ChipManifest {
 }
 
 function scanCsvFiles(dataRoot: string): ScannedChip[] {
-  const gpioFiles: string[] = [];
+  const gpioFilesByChip = new Map<string, string>();
   const pinoutFilesByChip = new Map<string, string[]>();
 
   function walk(dir: string): void {
@@ -98,7 +99,7 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
 
       const gpioMatch = GPIO_AF_FILE.exec(entry);
       if (gpioMatch) {
-        gpioFiles.push(fullPath);
+        gpioFilesByChip.set(gpioMatch[1], fullPath);
         continue;
       }
 
@@ -114,20 +115,33 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
 
   walk(dataRoot);
 
-  return gpioFiles
-    .map((gpioAfPath): ScannedChip | undefined => {
-      const relativePath = toManifestPath(dataRoot, gpioAfPath);
-      const chipPathParts = readChipPathParts(relativePath);
+  const chipIds = [...new Set([...gpioFilesByChip.keys(), ...pinoutFilesByChip.keys()])].sort();
 
-      const pathParts = relativePath.split("/");
-      const fileName = pathParts[pathParts.length - 1] ?? "";
-      const match = GPIO_AF_FILE.exec(fileName);
-      if (!match || !chipPathParts) {
+  return chipIds
+    .map((id): ScannedChip | undefined => {
+      const gpioAfPath = gpioFilesByChip.get(id);
+      const chipPinouts = pinoutFilesByChip.get(id) ?? [];
+      const sourceFile = gpioAfPath ?? chipPinouts[0];
+      if (!sourceFile) {
         return undefined;
       }
 
-      const id = match[1];
-      const chipPinouts = pinoutFilesByChip.get(id) ?? [];
+      const sourcePath = toManifestPath(dataRoot, sourceFile);
+      const chipPathParts = readChipPathParts(sourcePath);
+      if (!chipPathParts) {
+        return undefined;
+      }
+
+      const gpioAfCsv = gpioAfPath ? toManifestPath(dataRoot, gpioAfPath) : undefined;
+      if (gpioAfPath) {
+        const pathParts = gpioAfCsv.split("/");
+        const fileName = pathParts[pathParts.length - 1] ?? "";
+        const match = GPIO_AF_FILE.exec(fileName);
+        if (!match) {
+          return undefined;
+        }
+      }
+
       const packages = chipPinouts
         .map((pinoutPath) => {
           const pinoutFileName = pinoutPath.split(/[\\/]/).pop() ?? "";
@@ -154,13 +168,14 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
         vendorSlug: chipPathParts.vendorSlug,
         familySlug: chipPathParts.familySlug,
         chipSlug: chipPathParts.chipSlug,
-        gpioAfCsv: relativePath,
-        sourcePath: relativePath,
+        functionSource: gpioAfCsv ? "gpio-af-csv" : "pinout-csv",
+        gpioAfCsv,
+        sourcePath,
         packages
       };
     })
     .filter((chip): chip is ScannedChip => chip !== undefined)
-    .sort((left, right) => left.gpioAfCsv.localeCompare(right.gpioAfCsv));
+    .sort((left, right) => left.sourcePath.localeCompare(right.sourcePath));
 }
 
 function mergeChip(scanned: ScannedChip, existing?: ChipManifestEntry): ChipManifestEntry {
@@ -169,9 +184,10 @@ function mergeChip(scanned: ScannedChip, existing?: ChipManifestEntry): ChipMani
     vendor: existing?.vendor ?? toDisplayName(scanned.vendorSlug),
     family: existing?.family ?? scanned.familySlug.toUpperCase(),
     displayName: existing?.displayName ?? scanned.id,
+    functionSource: scanned.functionSource,
     gpioAfCsv: scanned.gpioAfCsv,
     packages: scanned.packages,
-    source: existing?.source ?? `${scanned.id} GPIO AF CSV scanned from ${scanned.sourcePath}`,
+    source: existing?.source ?? `${scanned.id} ${scanned.functionSource} CSV scanned from ${scanned.sourcePath}`,
     status: existing?.status ?? "draft"
   };
 }

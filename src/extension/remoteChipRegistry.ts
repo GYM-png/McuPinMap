@@ -94,13 +94,17 @@ export class RemoteChipRegistry {
       return this.cachedIndex;
     }
 
-    const cachedIndex = this.readIndexCache();
-    if (cachedIndex) {
-      this.cachedIndex = cachedIndex;
-      return cachedIndex;
-    }
+    try {
+      return await this.refreshIndex();
+    } catch (error) {
+      const cachedIndex = this.readIndexCache();
+      if (cachedIndex) {
+        this.cachedIndex = cachedIndex;
+        return cachedIndex;
+      }
 
-    return this.refreshIndex();
+      throw error;
+    }
   }
 
   private saveIndexCache(index: RemoteChipIndex): void {

@@ -92,10 +92,49 @@ describe("RemoteChipRegistry", () => {
     expect(await registry.searchRemoteChips("gd32f407")).toEqual(remoteIndex.chips);
   });
 
-  it("uses a persisted cached index before fetching the network", async () => {
+  it("refreshes the remote index before falling back to a persisted cache", async () => {
+    writeFileSync(join(storageRoot, "remote-index.json"), JSON.stringify(remoteIndex), "utf8");
+    const updatedIndex: RemoteChipIndex = {
+      ...remoteIndex,
+      dataVersion: "2026-06-08",
+      chips: [
+        ...remoteIndex.chips,
+        {
+          id: "GD32H757",
+          displayName: "GD32H757",
+          vendor: "GigaDevice",
+          family: "GD32H7",
+          packages: ["LQFP176"],
+          status: "stable",
+          chipUrl: "https://example.com/gd32h757.json",
+          sourceFiles: [
+            {
+              type: "gpio-af",
+              url: "https://example.com/GD32H757_GPIO_AF.csv"
+            }
+          ]
+        }
+      ]
+    };
+    const fetchJson = vi.fn(async () => updatedIndex);
+    const registry = new RemoteChipRegistry(context(storageRoot), repository, {
+      indexUrl: "https://example.com/index.json",
+      fetchJson
+    });
+
+    expect((await registry.searchRemoteChips("gd32h757")).map((chip) => chip.id)).toEqual([
+      "GD32H757"
+    ]);
+    expect(fetchJson).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(readFileSync(join(storageRoot, "remote-index.json"), "utf8"))).toEqual(
+      updatedIndex
+    );
+  });
+
+  it("falls back to a persisted cached index when refreshing fails", async () => {
     writeFileSync(join(storageRoot, "remote-index.json"), JSON.stringify(remoteIndex), "utf8");
     const fetchJson = vi.fn(async () => {
-      throw new Error("network should not be used");
+      throw new Error("offline");
     });
     const registry = new RemoteChipRegistry(context(storageRoot), repository, {
       indexUrl: "https://example.com/index.json",
@@ -103,7 +142,7 @@ describe("RemoteChipRegistry", () => {
     });
 
     expect(await registry.searchRemoteChips("gd32f407")).toEqual(remoteIndex.chips);
-    expect(fetchJson).not.toHaveBeenCalled();
+    expect(fetchJson).toHaveBeenCalledTimes(1);
   });
 
   it("ignores an invalid persisted cache and refreshes from the network", async () => {

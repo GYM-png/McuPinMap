@@ -10,17 +10,20 @@ import type { ChipRepository } from "./chipRepository";
 import { importLocalCsvWithDialog } from "./csvImport";
 import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportConfig";
 import { RemoteChipRegistry } from "./remoteChipRegistry";
+import { getNonce, renderPinMapLauncherHtml } from "./sidebarLauncher";
 
 const ASSIGNMENTS_KEY = "mcupinfunc.assignments";
+
+let currentPinMapPanel: vscode.WebviewPanel | undefined;
 
 export const openPinMapPanel = (
   context: vscode.ExtensionContext,
   chipRepository: ChipRepository
 ): void => {
-  const remoteChipRegistry = new RemoteChipRegistry(context, chipRepository);
-  let installedChips = chipRepository.listChips();
-  let selectedChipId: string | undefined = installedChips[0]?.id;
-  let assignments = context.workspaceState.get<Assignment[]>(ASSIGNMENTS_KEY, []);
+  if (currentPinMapPanel) {
+    currentPinMapPanel.reveal(vscode.ViewColumn.One);
+    return;
+  }
 
   const panel = vscode.window.createWebviewPanel(
     "mcupinfunc.pinMap",
@@ -31,9 +34,52 @@ export const openPinMapPanel = (
       localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "dist", "webview")]
     }
   );
+  currentPinMapPanel = panel;
+  panel.onDidDispose(() => {
+    currentPinMapPanel = undefined;
+  });
+
+  initializePinMapWebview(panel.webview, context, chipRepository);
+};
+
+export class PinMapViewProvider implements vscode.WebviewViewProvider {
+  public static readonly viewType = "mcupinfunc.pinMapView";
+
+  public constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly chipRepository: ChipRepository
+  ) {}
+
+  public resolveWebviewView(webviewView: vscode.WebviewView): void {
+    webviewView.webview.options = {
+      enableScripts: true
+    };
+
+    webviewView.webview.html = renderPinMapLauncherHtml(getNonce());
+    webviewView.webview.onDidReceiveMessage(
+      (message: { type?: string }) => {
+        if (message.type === "openPinMap") {
+          openPinMapPanel(this.context, this.chipRepository);
+        }
+      },
+      undefined,
+      this.context.subscriptions
+    );
+  }
+}
+
+const initializePinMapWebview = (
+  webview: vscode.Webview,
+  context: vscode.ExtensionContext,
+  chipRepository: ChipRepository
+): void => {
+  const remoteChipRegistry = new RemoteChipRegistry(context, chipRepository);
+  let installedChips = chipRepository.listChips();
+  let selectedChipId: string | undefined = installedChips[0]?.id;
+  let assignments = context.workspaceState.get<Assignment[]>(ASSIGNMENTS_KEY, []);
 
   const postMessage = (message: ExtensionToWebviewMessage): void => {
-    void panel.webview.postMessage(message);
+    void webview.postMessage(message);
   };
 
   const getSelectedAssignments = (): Assignment[] =>
@@ -109,9 +155,9 @@ export const openPinMapPanel = (
     await vscode.window.showTextDocument(document, { preview: false });
   };
 
-  panel.webview.html = getHtml(panel.webview, context.extensionUri);
+  webview.html = getHtml(webview, context.extensionUri);
 
-  panel.webview.onDidReceiveMessage(
+  webview.onDidReceiveMessage(
     async (message: WebviewToExtensionMessage) => {
       switch (message.type) {
         case "ready":
@@ -292,7 +338,7 @@ const getHtml = (webview: vscode.Webview, extensionUri: vscode.Uri): string => {
   const styleUri = webview.asWebviewUri(
     vscode.Uri.joinPath(extensionUri, "dist", "webview", "assets", "main.css")
   );
-  const nonce = getNonce();
+  const nonce = getWebviewNonce();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -310,7 +356,7 @@ const getHtml = (webview: vscode.Webview, extensionUri: vscode.Uri): string => {
 </html>`;
 };
 
-const getNonce = (): string => {
+const getWebviewNonce = (): string => {
   const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let text = "";
 

@@ -37,6 +37,27 @@ const chip: Chip = {
       ]
     },
     {
+      name: "PA0",
+      port: "A",
+      number: 0,
+      functions: [
+        {
+          af: "AF0",
+          raw: "GPIO_IN",
+          peripheral: "GPIO",
+          signal: "IN",
+          aliases: ["PA0"]
+        },
+        {
+          af: "AF0",
+          raw: "GPIO_OUT",
+          peripheral: "GPIO",
+          signal: "OUT",
+          aliases: ["PA0"]
+        }
+      ]
+    },
+    {
       name: "PB10",
       port: "B",
       number: 10,
@@ -101,6 +122,18 @@ describe("createSearchIndex", () => {
 
     expect(index.search("PA15")).toEqual(pa15Result);
     expect(index.search("pa15")).toEqual(pa15Result);
+  });
+
+  it("returns only the pin row when a query exactly matches a pin name", () => {
+    const index = createSearchIndex(chip);
+
+    expect(index.search("PA0")).toEqual([
+      {
+        kind: "pin",
+        pinName: "PA0",
+        label: "PA0"
+      }
+    ]);
   });
 
   it("returns peripheral rows for peripheral name matches", () => {
@@ -175,5 +208,18 @@ describe("matchesFunctionSearchQuery", () => {
     expect(matchesFunctionSearchQuery(canFunction, "can1_r")).toBe(true);
     expect(matchesFunctionSearchQuery(canFunction, "AN1")).toBe(false);
     expect(matchesFunctionSearchQuery(canFunction, "")).toBe(false);
+  });
+
+  it("does not treat an exact pin name query as a function highlight match", () => {
+    const gpioFunction = {
+      af: "AF0",
+      raw: "GPIO_IN",
+      peripheral: "GPIO",
+      signal: "IN",
+      aliases: ["PA0"]
+    };
+
+    expect(matchesFunctionSearchQuery(gpioFunction, "PA0", "PA0")).toBe(false);
+    expect(matchesFunctionSearchQuery(gpioFunction, "GPIO", "PA0")).toBe(true);
   });
 });

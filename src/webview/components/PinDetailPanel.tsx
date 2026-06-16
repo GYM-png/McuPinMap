@@ -44,7 +44,7 @@ export const PinDetailPanel = (): JSX.Element => {
                 signal: fn.signal
               };
               const isAssigned = assignedFunctionIds.has(assignment.id);
-              const isSearchMatch = matchesFunctionSearchQuery(fn, query);
+              const isSearchMatch = matchesFunctionSearchQuery(fn, query, pin.name);
 
               return (
                 <article

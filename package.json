@@ -1,50 +1,63 @@
 {
-  "name": "mcupinfunc",
-  "displayName": "McuPinFunc",
+  "name": "mcupinmap",
+  "displayName": "McuPinMap",
   "description": "VS Code Pin Map workspace for MCU GPIO alternate functions.",
-  "version": "0.0.1",
-  "publisher": "local-dev",
+  "version": "0.1.0",
+  "publisher": "gym",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GYM-png/McuPinMap.git"
+  },
   "icon": "resources/logo.png",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": ["Other"],
+  "keywords": [
+    "mcu",
+    "pinmap",
+    "pin-map",
+    "gpio",
+    "alternate-function",
+    "embedded"
+  ],
   "activationEvents": [
-    "onCommand:mcupinfunc.openPinMap",
-    "onView:mcupinfunc.pinMapView"
+    "onCommand:mcupinmap.openPinMap",
+    "onView:mcupinmap.pinMapView"
   ],
   "main": "./dist/extension/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "mcupinfunc.openPinMap",
-        "title": "McuPinFunc: Open Pin Map"
+        "command": "mcupinmap.openPinMap",
+        "title": "McuPinMap: Open Pin Map"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "mcupinfunc",
-          "title": "McuPinFunc",
+          "id": "mcupinmap",
+          "title": "McuPinMap",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "mcupinfunc": [
+      "mcupinmap": [
         {
-          "id": "mcupinfunc.pinMapView",
+          "id": "mcupinmap.pinMapView",
           "name": "Pin Map"
         }
       ]
     },
     "configuration": {
-      "title": "McuPinFunc",
+      "title": "McuPinMap",
       "properties": {
-        "mcupinfunc.remoteIndexUrl": {
+        "mcupinmap.remoteIndexUrl": {
           "type": "string",
           "default": "https://raw.githubusercontent.com/GYM-png/mcupinfunc-data/main/index.json",
-          "description": "URL of the remote McuPinFunc chip index JSON."
+          "description": "URL of the remote McuPinMap chip index JSON."
         }
       }
     }
@@ -56,6 +69,7 @@
     "build:extension-only": "npm run build:extension && npm run build:webview",
     "validate:remote-data": "tsx scripts/validate-data-pack.ts --data-root external-data/mcupinfunc-data",
     "build:remote-data": "tsx scripts/build-remote-chip-index.ts --data-root external-data/mcupinfunc-data --owner GYM-png --repo mcupinfunc-data --branch main",
+    "verify:remote-data": "python external-data/mcupinfunc-data/tools/verify_release_data.py",
     "package:light": "npm run build:extension-only && npx --yes @vscode/vsce@latest package --allow-missing-repository",
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:webview": "vite build",

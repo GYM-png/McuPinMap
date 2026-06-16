@@ -21,7 +21,7 @@ describe("ChipLibrary", () => {
   let library: ChipLibrary;
 
   beforeEach(() => {
-    storageRoot = mkdtempSync(join(tmpdir(), "mcupinfunc-chip-library-"));
+    storageRoot = mkdtempSync(join(tmpdir(), "mcupinmap-chip-library-"));
     library = new ChipLibrary(storageRoot);
   });
 
@@ -47,6 +47,31 @@ describe("ChipLibrary", () => {
       }
     ]);
     expect(library.loadInstalledChip("GD32F407")).toEqual(remoteChip);
+  });
+
+  it("deduplicates package layouts when loading an existing remote chip", () => {
+    const duplicatePackageChip = chip({
+      packages: [
+        {
+          packageName: "BGA100",
+          packageType: "BGA",
+          totalPads: 100,
+          pins: []
+        },
+        {
+          packageName: "BGA100",
+          packageType: "BGA",
+          totalPads: 100,
+          pins: []
+        }
+      ]
+    });
+    mkdirSync(join(storageRoot, "chips"), { recursive: true });
+    writeFileSync(remoteChipPath(storageRoot, "GD32F407"), JSON.stringify(duplicatePackageChip), "utf8");
+
+    expect(library.loadInstalledChip("GD32F407").packages.map((layout) => layout.packageName)).toEqual([
+      "BGA100"
+    ]);
   });
 
   it("prefers imported chips over duplicate remote chips", () => {

@@ -1,3 +1,5 @@
+import { dedupePackageNames } from "./chipPackages";
+
 export type RemoteChipSourceFile =
   | {
       type: "gpio-af";
@@ -104,7 +106,8 @@ function validateChipSummary(value: unknown, path: string): RemoteChipSummary {
     throw new Error(`${path}.packages must be an array`);
   }
 
-  if (!candidate.packages.every(nonEmptyString)) {
+  const packages = candidate.packages;
+  if (!packages.every(nonEmptyString)) {
     throw new Error(`${path}.packages must contain only non-empty strings`);
   }
 
@@ -121,7 +124,7 @@ function validateChipSummary(value: unknown, path: string): RemoteChipSummary {
     displayName: candidate.displayName,
     vendor: candidate.vendor,
     family: candidate.family,
-    packages: [...candidate.packages],
+    packages: dedupePackageNames(packages),
     status: candidate.status,
     chipUrl: candidate.chipUrl,
     sourceFiles: candidate.sourceFiles.map((sourceFile, index) =>

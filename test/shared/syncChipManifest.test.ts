@@ -11,7 +11,7 @@ function writeJson(path: string, value: unknown): void {
 
 describe("syncChipManifest", () => {
   it("adds scanned chip CSV files and package pinouts while preserving existing metadata", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-manifest-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-manifest-"));
     const dataRoot = join(root, "data/chips");
     const existingChipDir = join(dataRoot, "gigadevice/gd32f4/gd32f407");
     const newChipDir = join(dataRoot, "gigadevice/gd32h7/gd32h759");
@@ -81,7 +81,7 @@ describe("syncChipManifest", () => {
   });
 
   it("writes manifest under a configurable data root", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-manifest-custom-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-manifest-custom-"));
     const dataRoot = join(root, "custom-data");
     const chipDir = join(dataRoot, "gigadevice/gd32f4/gd32f407");
     mkdirSync(chipDir, { recursive: true });
@@ -106,7 +106,7 @@ describe("syncChipManifest", () => {
   });
 
   it("scans the remote data repo source layout without falling back to legacy path parsing", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-manifest-remote-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-manifest-remote-"));
     const dataRoot = join(root, "remote-data");
     const chipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f407/source");
     const invalidChipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f405");
@@ -133,8 +133,31 @@ describe("syncChipManifest", () => {
     });
   });
 
+  it("ignores staging CSV exports when syncing remote data manifests", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-manifest-staging-"));
+    const dataRoot = join(root, "remote-data");
+    const chipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f470/source");
+    const stagingChipDir = join(dataRoot, "staging/gd32-csv-export/chips/gigadevice/gd32f4/gd32f470/source");
+    mkdirSync(chipDir, { recursive: true });
+    mkdirSync(stagingChipDir, { recursive: true });
+
+    writeFileSync(join(chipDir, "GD32F470_GPIO_AF.csv"), "PinName,AF0\n", "utf8");
+    writeFileSync(join(chipDir, "GD32F470_BGA100_PINOUT.csv"), "BallName,PinName,PinType\n", "utf8");
+    writeFileSync(join(stagingChipDir, "GD32F470_BGA100_PINOUT.csv"), "BallName,PinName,PinType\n", "utf8");
+
+    const manifest = syncChipManifest(root, { dataRoot });
+
+    expect(manifest.chips).toHaveLength(1);
+    expect(manifest.chips[0]?.packages).toEqual([
+      {
+        name: "BGA100",
+        pinoutCsv: "chips/gigadevice/gd32f4/gd32f470/source/GD32F470_BGA100_PINOUT.csv"
+      }
+    ]);
+  });
+
   it("syncs a chip that only has package pinout CSVs as pinout-csv", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-sync-pinout-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-sync-pinout-"));
     const dataRoot = join(root, "mcupinfunc-data");
     const chipDir = join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/source");
     mkdirSync(chipDir, { recursive: true });

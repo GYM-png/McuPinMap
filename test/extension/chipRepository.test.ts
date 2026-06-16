@@ -26,8 +26,8 @@ describe("ChipRepository", () => {
   let extensionRoot: string;
 
   beforeEach(() => {
-    storageRoot = mkdtempSync(join(tmpdir(), "mcupinfunc-repository-storage-"));
-    extensionRoot = mkdtempSync(join(tmpdir(), "mcupinfunc-extension-root-"));
+    storageRoot = mkdtempSync(join(tmpdir(), "mcupinmap-repository-storage-"));
+    extensionRoot = mkdtempSync(join(tmpdir(), "mcupinmap-extension-root-"));
   });
 
   afterEach(() => {
@@ -80,4 +80,5 @@ describe("ChipRepository", () => {
       "Chip EXTENSION_ONLY is not installed in the local chip library."
     );
   });
+
 });

@@ -7,7 +7,7 @@ import { buildRemoteChipIndex } from "../../scripts/build-remote-chip-index";
 
 describe("buildRemoteChipIndex", () => {
   it("writes per-chip JSON and a raw GitHub URL index for a data repo layout", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-remote-index-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-remote-index-"));
     const dataRoot = join(root, "mcupinfunc-data");
     const chipDir = join(dataRoot, "chips/gigadevice/gd32f4/gd32f407/source");
     mkdirSync(chipDir, { recursive: true });
@@ -66,7 +66,7 @@ describe("buildRemoteChipIndex", () => {
   });
 
   it("builds remote index entries for pinout-csv chips without gpio-af source files", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-remote-pinout-index-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-remote-pinout-index-"));
     const dataRoot = join(root, "mcupinfunc-data");
     const chipDir = join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/source");
     mkdirSync(chipDir, { recursive: true });

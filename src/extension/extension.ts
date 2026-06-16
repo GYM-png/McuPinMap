@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext): void {
       PinMapViewProvider.viewType,
       new PinMapViewProvider(context, chipRepository)
     ),
-    vscode.commands.registerCommand("mcupinfunc.openPinMap", () => {
+    vscode.commands.registerCommand("mcupinmap.openPinMap", () => {
       openPinMapPanel(context, chipRepository);
     })
   );

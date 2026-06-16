@@ -93,7 +93,7 @@ export async function importLocalCsvWithDialog(): Promise<Chip | undefined> {
     filters: {
       "CSV files": ["csv"]
     },
-    title: "Import McuPinFunc CSV files"
+    title: "Import McuPinMap CSV files"
   });
 
   if (!selectedFiles || selectedFiles.length === 0) {

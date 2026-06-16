@@ -38,6 +38,20 @@ describe("validateRemoteChipIndex", () => {
     expect(validateRemoteChipIndex(index())).toEqual(index());
   });
 
+  it("deduplicates package names from remote index summaries", () => {
+    const remoteIndex = validateRemoteChipIndex({
+      ...index(),
+      chips: [
+        {
+          ...index().chips[0],
+          packages: ["BGA100", "BGA100", "BGA176", "BGA176", "LQFP100"]
+        }
+      ]
+    });
+
+    expect(remoteIndex.chips[0]?.packages).toEqual(["BGA100", "BGA176", "LQFP100"]);
+  });
+
   it("rejects unsupported schema versions", () => {
     expect(() =>
       validateRemoteChipIndex({

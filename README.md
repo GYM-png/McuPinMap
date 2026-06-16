@@ -1,6 +1,6 @@
-# McuPinFunc
+# McuPinMap
 
-McuPinFunc is a VS Code extension for browsing MCU GPIO alternate functions and planning pin assignments.
+McuPinMap is a VS Code extension for browsing MCU GPIO alternate functions and planning pin assignments.
 
 ## Features
 

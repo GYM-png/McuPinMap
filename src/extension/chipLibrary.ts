@@ -14,6 +14,7 @@ import {
   remoteChipDirectory,
   remoteChipPath
 } from "../shared/data/chipStorage";
+import { normalizeChipPackages } from "../shared/data/chipPackages";
 import type { Chip, ChipSummary } from "../shared/types";
 
 type ChipSource = "remote" | "imported";
@@ -80,7 +81,11 @@ export class ChipLibrary {
 
   private saveChip(directory: string, chip: Chip): void {
     mkdirSync(directory, { recursive: true });
-    writeFileSync(join(directory, chipFileName(chip.id)), JSON.stringify(chip, null, 2), "utf8");
+    writeFileSync(
+      join(directory, chipFileName(chip.id)),
+      JSON.stringify(normalizeChipPackages(chip), null, 2),
+      "utf8"
+    );
   }
 
   private listChipFiles(source: ChipSource): Array<{ fileId: string; path: string }> {
@@ -124,7 +129,7 @@ export class ChipLibrary {
       throw new Error("chip file does not contain a valid Chip object");
     }
 
-    return value;
+    return normalizeChipPackages(value);
   }
 
   private isChip(value: unknown): value is Chip {

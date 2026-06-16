@@ -12,7 +12,7 @@ import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportCo
 import { RemoteChipRegistry } from "./remoteChipRegistry";
 import { getNonce, renderPinMapLauncherHtml } from "./sidebarLauncher";
 
-const ASSIGNMENTS_KEY = "mcupinfunc.assignments";
+const ASSIGNMENTS_KEY = "mcupinmap.assignments";
 
 let currentPinMapPanel: vscode.WebviewPanel | undefined;
 
@@ -26,8 +26,8 @@ export const openPinMapPanel = (
   }
 
   const panel = vscode.window.createWebviewPanel(
-    "mcupinfunc.pinMap",
-    "McuPinFunc Pin Map",
+    "mcupinmap.pinMap",
+    "McuPinMap Pin Map",
     vscode.ViewColumn.One,
     {
       enableScripts: true,
@@ -43,7 +43,7 @@ export const openPinMapPanel = (
 };
 
 export class PinMapViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "mcupinfunc.pinMapView";
+  public static readonly viewType = "mcupinmap.pinMapView";
 
   public constructor(
     private readonly context: vscode.ExtensionContext,
@@ -347,7 +347,7 @@ const getHtml = (webview: vscode.Webview, extensionUri: vscode.Uri): string => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';" />
     <link rel="stylesheet" href="${styleUri}" />
-    <title>McuPinFunc Pin Map</title>
+    <title>McuPinMap Pin Map</title>
   </head>
   <body>
     <div id="root"></div>

@@ -4,7 +4,7 @@ export const renderPinMapLauncherHtml = (nonce: string): string => `<!DOCTYPE ht
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
-    <title>McuPinFunc</title>
+    <title>McuPinMap</title>
     <style>
       body {
         box-sizing: border-box;
@@ -53,7 +53,7 @@ export const renderPinMapLauncherHtml = (nonce: string): string => `<!DOCTYPE ht
   </head>
   <body>
     <main class="container">
-      <h1>McuPinFunc</h1>
+      <h1>McuPinMap</h1>
       <p>Open the full Pin Map workspace in the editor area.</p>
       <button type="button" id="openPinMap">Open Pin Map</button>
     </main>

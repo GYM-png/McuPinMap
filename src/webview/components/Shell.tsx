@@ -91,7 +91,7 @@ export const Shell = ({ sidebar, detail, error, children }: ShellProps): JSX.Ele
     <main className="pin-workspace">
       <header className="workspace-header">
         <div>
-          <p className="eyebrow">McuPinFunc</p>
+          <p className="eyebrow">McuPinMap</p>
           <h1>Pin Map Workspace</h1>
         </div>
         <div className="workspace-header-actions">

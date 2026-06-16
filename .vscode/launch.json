@@ -20,7 +20,7 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--command",
-        "mcupinfunc.openPinMap"
+        "mcupinmap.openPinMap"
       ],
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"

@@ -149,7 +149,7 @@ function configuredRemoteIndexUrl(): string | undefined {
   try {
     const vscodeModule = require("vscode") as typeof import("vscode");
     const value = vscodeModule.workspace
-      .getConfiguration("mcupinfunc")
+      .getConfiguration("mcupinmap")
       .get<string>("remoteIndexUrl");
     return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
   } catch {

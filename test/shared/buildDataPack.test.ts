@@ -42,7 +42,7 @@ describe("buildChipFromManifestEntry", () => {
   });
 
   it("builds pinout-sourced chips from Alternate and Remap columns", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-pinout-source-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-pinout-source-"));
     const dataRoot = join(root, "data");
     mkdirSync(dataRoot, { recursive: true });
 
@@ -85,7 +85,7 @@ describe("buildChipFromManifestEntry", () => {
   });
 
   it("builds generated chip JSON from configurable data and output roots", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-build-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-build-"));
     const dataRoot = join(root, "custom-data");
     const outputRoot = join(root, "custom-output");
     const chipDir = join(dataRoot, "gigadevice/gd32f4/gd32f407");

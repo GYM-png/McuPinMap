@@ -22,6 +22,7 @@ export type SyncChipManifestOptions = {
 
 const GPIO_AF_FILE = /^(.+)_GPIO_AF\.csv$/;
 const PACKAGE_PINOUT_FILE = /^(.+)_(LQFP|BGA)(\d+)_PINOUT\.csv$/;
+const IGNORED_TOP_LEVEL_DIRS = new Set(["staging"]);
 
 function toManifestPath(dataRoot: string, filePath: string): string {
   return relative(dataRoot, filePath).replace(/\\/g, "/");
@@ -89,6 +90,11 @@ function scanCsvFiles(dataRoot: string): ScannedChip[] {
       const fullPath = join(dir, entry);
       const stats = statSync(fullPath);
       if (stats.isDirectory()) {
+        const relativeDir = toManifestPath(dataRoot, fullPath);
+        if (IGNORED_TOP_LEVEL_DIRS.has(relativeDir.split("/")[0] ?? "")) {
+          continue;
+        }
+
         walk(fullPath);
         continue;
       }

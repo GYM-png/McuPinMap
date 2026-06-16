@@ -23,7 +23,7 @@ export function renderAssignmentsAsMarkdown(assignments: Assignment[]): string {
     .join("\n");
 
   return [
-    "# McuPinFunc Assignments",
+    "# McuPinMap Assignments",
     "",
     "| Pin | AF | Function | Peripheral | Signal |",
     "|---|---|---|---|---|",

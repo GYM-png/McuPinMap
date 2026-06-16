@@ -6,7 +6,7 @@ import { validateDataPack } from "../../scripts/validate-data-pack";
 
 describe("validateDataPack", () => {
   it("validates pinout-csv chips without GPIO AF CSV files", () => {
-    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-validate-pinout-"));
+    const root = mkdtempSync(join(tmpdir(), "mcupinmap-validate-pinout-"));
     const dataRoot = join(root, "mcupinfunc-data");
     const chipDir = join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/source");
     mkdirSync(chipDir, { recursive: true });

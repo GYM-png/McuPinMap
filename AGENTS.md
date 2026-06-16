@@ -1,10 +1,10 @@
 # AGENTS.md
 
-本文件是 McuPinFunc 项目给 Codex/子代理使用的协作规范。后续自动化修改、审查、调试和提交都应优先遵守这里的约定。
+本文件是 McuPinMap 项目给 Codex/子代理使用的协作规范。后续自动化修改、审查、调试和提交都应优先遵守这里的约定。
 
 ## 项目定位
 
-McuPinFunc 是一个 VS Code 插件，用于查询 MCU GPIO Alternate Function，并辅助规划引脚功能分配。
+McuPinMap 是一个 VS Code 插件，用于查询 MCU GPIO Alternate Function，并辅助规划引脚功能分配。
 
 产品方向：
 - Pin Map 优先。
@@ -296,7 +296,7 @@ npm run build
 
 可用调试入口：
 - `Run Extension`：启动 Extension Development Host。
-- `Run Extension and Open Pin Map`：启动 Extension Development Host，并尝试自动执行 `mcupinfunc.openPinMap`。
+- `Run Extension and Open Pin Map`：启动 Extension Development Host，并尝试自动执行 `mcupinmap.openPinMap`。
 
 推荐手动测试流程：
 1. 打开项目根目录。
@@ -307,7 +307,7 @@ npm run build
 
 如果自动命令未打开面板：
 - 在 Extension Development Host 中按 `Ctrl+Shift+P`。
-- 执行 `McuPinFunc: Open Pin Map`。
+- 执行 `McuPinMap: Open Pin Map`。
 
 ## 编码规范
 

@@ -56,7 +56,7 @@ describe("RemoteChipRegistry", () => {
   let repository: ChipRepository;
 
   beforeEach(() => {
-    storageRoot = mkdtempSync(join(tmpdir(), "mcupinfunc-remote-registry-"));
+    storageRoot = mkdtempSync(join(tmpdir(), "mcupinmap-remote-registry-"));
     repository = new ChipRepository(context(storageRoot));
   });
 
@@ -186,6 +186,43 @@ describe("RemoteChipRegistry", () => {
       }
     ]);
     expect(repository.loadChip("GD32F407")).toEqual(remoteChip);
+  });
+
+  it("deduplicates package layouts when saving a downloaded remote chip", async () => {
+    const duplicatedPackageChip: Chip = {
+      ...remoteChip,
+      packages: [
+        {
+          packageName: "BGA100",
+          packageType: "BGA",
+          totalPads: 100,
+          pins: []
+        },
+        {
+          packageName: "BGA100",
+          packageType: "BGA",
+          totalPads: 100,
+          pins: []
+        }
+      ]
+    };
+    const fetchJson = vi.fn(async (url: string) => {
+      if (url.endsWith("index.json")) {
+        return remoteIndex;
+      }
+
+      return duplicatedPackageChip;
+    });
+    const registry = new RemoteChipRegistry(context(storageRoot), repository, {
+      indexUrl: "https://example.com/index.json",
+      fetchJson
+    });
+
+    await registry.downloadRemoteChip("GD32F407");
+
+    expect(repository.loadChip("GD32F407").packages.map((layout) => layout.packageName)).toEqual([
+      "BGA100"
+    ]);
   });
 
   it("rejects downloaded chip JSON whose id does not match the index entry", async () => {

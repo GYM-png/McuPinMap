@@ -63,26 +63,34 @@ function rawGithubUrl(owner: string, repo: string, branch: string, filePath: str
 }
 
 function chipOutputRelativePath(entry: ChipManifestEntry): string {
-  const sourceDir = dirname(entry.gpioAfCsv).replace(/\\/g, "/");
-  if (sourceDir.endsWith("/source")) {
-    return `${dirname(sourceDir)}/chip.json`.replace(/\\/g, "/");
+  const sourceFile = entry.gpioAfCsv ?? entry.packages[0]?.pinoutCsv;
+  if (sourceFile) {
+    const sourceDir = dirname(sourceFile).replace(/\\/g, "/");
+    if (sourceDir.endsWith("/source")) {
+      return `${dirname(sourceDir)}/chip.json`.replace(/\\/g, "/");
+    }
   }
 
   return `chips/${entry.vendor.toLowerCase()}/${entry.family.toLowerCase()}/${entry.id.toLowerCase()}/chip.json`;
 }
 
 function sourceFiles(entry: ChipManifestEntry, owner: string, repo: string, branch: string): RemoteChipSourceFile[] {
-  return [
-    {
+  const files: RemoteChipSourceFile[] = [];
+  if (entry.gpioAfCsv) {
+    files.push({
       type: "gpio-af",
       url: rawGithubUrl(owner, repo, branch, entry.gpioAfCsv)
-    },
+    });
+  }
+
+  files.push(
     ...entry.packages.map((packageEntry) => ({
       type: "pinout" as const,
       package: packageEntry.name,
       url: rawGithubUrl(owner, repo, branch, packageEntry.pinoutCsv)
     }))
-  ];
+  );
+  return files;
 }
 
 export function buildRemoteChipIndex(root: string, options: BuildRemoteChipIndexOptions = {}): RemoteChipIndex {

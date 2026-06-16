@@ -31,6 +31,13 @@ export function createSearchIndex(chip: Chip): SearchIndex {
       const exactRows = rows.filter((row) =>
         row.terms.some((term) => isExactTermMatch(term, normalizedQueryLower))
       );
+      const exactPinNameRows = exactRows.filter((row) =>
+        isExactPinNameMatch(row, normalizedQueryLower)
+      );
+      if (exactPinNameRows.length > 0) {
+        return dedupeRows(exactPinNameRows);
+      }
+
       const prefixRows = rows.filter(
         (row) =>
           !exactRows.includes(row) &&
@@ -42,11 +49,19 @@ export function createSearchIndex(chip: Chip): SearchIndex {
   };
 }
 
-export function matchesFunctionSearchQuery(fn: PinFunction, query: string): boolean {
+export function matchesFunctionSearchQuery(
+  fn: PinFunction,
+  query: string,
+  pinName?: string
+): boolean {
   const normalizedQuery = query.trim();
   const normalizedQueryLower = normalizedQuery.toLowerCase();
 
   if (!normalizedQuery) {
+    return false;
+  }
+
+  if (pinName && pinName.toLowerCase() === normalizedQueryLower) {
     return false;
   }
 
@@ -97,6 +112,10 @@ function isExactTermMatch(term: string, normalizedQueryLower: string): boolean {
 
 function isPrefixTermMatch(term: string, normalizedQueryLower: string): boolean {
   return term.toLowerCase().startsWith(normalizedQueryLower);
+}
+
+function isExactPinNameMatch(row: SearchRow, normalizedQueryLower: string): boolean {
+  return row.kind === "pin" && row.pinName.toLowerCase() === normalizedQueryLower;
 }
 
 function dedupeRows(rows: SearchRow[]): SearchResult[] {

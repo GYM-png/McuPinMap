@@ -48,10 +48,17 @@ export function validateManifest(input: unknown): ValidationResult {
     }
     seen.add(id);
 
-    const gpioAfCsv = chipRecord.gpioAfCsv;
+    const functionSource = chipRecord.functionSource ?? "gpio-af-csv";
+    if (functionSource !== "gpio-af-csv" && functionSource !== "pinout-csv") {
+      errors.push(`Chip ${id} functionSource must be gpio-af-csv or pinout-csv.`);
+    }
+
     const expectedFile = `${id}_GPIO_AF.csv`;
-    if (typeof gpioAfCsv !== "string" || !gpioAfCsv.endsWith(expectedFile)) {
+    const gpioAfCsv = chipRecord.gpioAfCsv;
+    if (functionSource === "gpio-af-csv" && (typeof gpioAfCsv !== "string" || !gpioAfCsv.endsWith(expectedFile))) {
       errors.push(`Chip ${id} must reference a GPIO AF CSV named ${expectedFile}.`);
+    } else if (functionSource === "pinout-csv" && gpioAfCsv !== undefined && typeof gpioAfCsv !== "string") {
+      errors.push(`Chip ${id} gpioAfCsv must be a string when provided.`);
     }
 
     const packages = chipRecord.packages;

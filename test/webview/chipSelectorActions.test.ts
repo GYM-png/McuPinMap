@@ -14,5 +14,10 @@ describe("Chip data panel actions", () => {
     expect(source).toContain('type: "downloadRemoteChip"');
     expect(source).toContain('type: "refreshInstalledChips"');
     expect(source).toContain('type: "removeInstalledChip"');
+    expect(source).toContain('className="remote-chip-actions"');
+    expect(source).not.toContain('className="installed-chip-list"');
+    expect(source).toContain("useState(false)");
+    expect(source).toContain("aria-expanded={!isCollapsed}");
+    expect(source).toContain('id="chip-data-body"');
   });
 });

@@ -46,11 +46,18 @@ export function validateDataPack(root: string, options: ValidateDataPackOptions 
   }
 
   for (const chip of manifest.chips) {
-    const csvPath = join(dataRoot, chip.gpioAfCsv);
-    const csvText = readFileSync(csvPath, "utf8");
-    const csvResult = validateGpioAfCsvText(csvText);
-    errors.push(...csvResult.errors.map((error) => `${chip.id}: ${error}`));
-    warnings.push(...csvResult.warnings.map((warning) => `${chip.id}: ${warning}`));
+    const functionSource = chip.functionSource ?? "gpio-af-csv";
+    if (functionSource === "gpio-af-csv") {
+      if (!chip.gpioAfCsv) {
+        errors.push(`${chip.id}: gpioAfCsv is required for gpio-af-csv chips.`);
+      } else {
+        const csvPath = join(dataRoot, chip.gpioAfCsv);
+        const csvText = readFileSync(csvPath, "utf8");
+        const csvResult = validateGpioAfCsvText(csvText);
+        errors.push(...csvResult.errors.map((error) => `${chip.id}: ${error}`));
+        warnings.push(...csvResult.warnings.map((warning) => `${chip.id}: ${warning}`));
+      }
+    }
 
     for (const packageEntry of chip.packages) {
       const lqfpMatch = /^LQFP(\d+)$/.exec(packageEntry.name);

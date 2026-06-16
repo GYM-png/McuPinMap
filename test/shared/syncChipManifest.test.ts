@@ -59,6 +59,7 @@ describe("syncChipManifest", () => {
         }
       ]
     });
+    expect(manifest.chips[0]?.functionSource).toBeUndefined();
     expect(manifest.chips[1]).toMatchObject({
       id: "GD32H759",
       vendor: "GigaDevice",
@@ -73,6 +74,7 @@ describe("syncChipManifest", () => {
       ],
       status: "draft"
     });
+    expect(manifest.chips[1]?.functionSource).toBeUndefined();
 
     const written = JSON.parse(readFileSync(join(dataRoot, "manifest.json"), "utf8")) as ChipManifest;
     expect(written).toEqual(manifest);
@@ -121,7 +123,7 @@ describe("syncChipManifest", () => {
     expect(manifest.chips[0]).toMatchObject({
       gpioAfCsv: "chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv",
       source:
-        "GD32F407 GPIO AF CSV scanned from chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv",
+        "GD32F407 gpio-af-csv CSV scanned from chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv",
       packages: [
         {
           name: "LQFP4",
@@ -129,5 +131,39 @@ describe("syncChipManifest", () => {
         }
       ]
     });
+  });
+
+  it("syncs a chip that only has package pinout CSVs as pinout-csv", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-sync-pinout-"));
+    const dataRoot = join(root, "mcupinfunc-data");
+    const chipDir = join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/source");
+    mkdirSync(chipDir, { recursive: true });
+    writeFileSync(
+      join(chipDir, "GD32F103_LQFP4_PINOUT.csv"),
+      [
+        "PadNumber,PinName,PinType,Alternate,Remap",
+        "1,PA4,gpio,SPI0_NSS,SPI2_NSS",
+        "2,VDD,power,,",
+        "3,VSS,ground,,",
+        "4,NRST,reset,,"
+      ].join("\n"),
+      "utf8"
+    );
+
+    const manifest = syncChipManifest(root, { dataRoot });
+
+    expect(manifest.chips).toEqual([
+      expect.objectContaining({
+        id: "GD32F103",
+        functionSource: "pinout-csv",
+        packages: [
+          {
+            name: "LQFP4",
+            pinoutCsv: "chips/gigadevice/gd32f1/gd32f103/source/GD32F103_LQFP4_PINOUT.csv"
+          }
+        ]
+      })
+    ]);
+    expect(manifest.chips[0]?.gpioAfCsv).toBeUndefined();
   });
 });

@@ -37,7 +37,7 @@ export function parseGpioAfCsvText(csvText: string): Pin[] {
   });
 }
 
-function parseFunction(af: string, raw: string): PinFunction {
+export function parseFunction(af: string, raw: string): PinFunction {
   const separatorIndex = raw.indexOf("_");
   if (separatorIndex === -1) {
     return {

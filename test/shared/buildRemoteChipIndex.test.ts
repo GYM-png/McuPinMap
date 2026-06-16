@@ -64,4 +64,41 @@ describe("buildRemoteChipIndex", () => {
     });
     expect(JSON.parse(readFileSync(join(dataRoot, "index.json"), "utf8"))).toEqual(index);
   });
+
+  it("builds remote index entries for pinout-csv chips without gpio-af source files", () => {
+    const root = mkdtempSync(join(tmpdir(), "mcupinfunc-remote-pinout-index-"));
+    const dataRoot = join(root, "mcupinfunc-data");
+    const chipDir = join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/source");
+    mkdirSync(chipDir, { recursive: true });
+    writeFileSync(
+      join(chipDir, "GD32F103_LQFP4_PINOUT.csv"),
+      [
+        "PadNumber,PinName,PinType,Alternate,Remap",
+        "1,PA4,gpio,SPI0_NSS,SPI2_NSS",
+        "2,PA5,gpio,SPI0_SCK,",
+        "3,VDD,power,,",
+        "4,VSS,ground,,"
+      ].join("\n"),
+      "utf8"
+    );
+
+    const index = buildRemoteChipIndex(root, {
+      dataRoot,
+      owner: "example",
+      repo: "chips",
+      branch: "dev"
+    });
+
+    expect(index.chips[0]).toMatchObject({
+      id: "GD32F103",
+      sourceFiles: [
+        {
+          type: "pinout",
+          package: "LQFP4",
+          url: "https://raw.githubusercontent.com/example/chips/dev/chips/gigadevice/gd32f1/gd32f103/source/GD32F103_LQFP4_PINOUT.csv"
+        }
+      ]
+    });
+    expect(existsSync(join(dataRoot, "chips/gigadevice/gd32f1/gd32f103/chip.json"))).toBe(true);
+  });
 });

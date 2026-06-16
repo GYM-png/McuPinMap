@@ -15,6 +15,18 @@ const entry = {
 };
 
 describe("normalizeChip", () => {
+  it("defaults function source to GPIO AF CSV", () => {
+    const chip = normalizeChip(entry, []);
+
+    expect(chip.functionSource).toBe("gpio-af-csv");
+  });
+
+  it("preserves pinout CSV function source", () => {
+    const chip = normalizeChip({ ...entry, functionSource: "pinout-csv" }, []);
+
+    expect(chip.functionSource).toBe("pinout-csv");
+  });
+
   it("preserves parsed package layouts", () => {
     const pins: Pin[] = [
       { name: "PB1", port: "B", number: 1, functions: [] },

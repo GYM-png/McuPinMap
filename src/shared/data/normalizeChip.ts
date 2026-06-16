@@ -6,6 +6,7 @@ export function normalizeChip(entry: ChipManifestEntry, pins: Pin[], packages: P
     displayName: entry.displayName,
     vendor: entry.vendor,
     family: entry.family,
+    functionSource: entry.functionSource ?? "gpio-af-csv",
     pins: pins.map(withGpioInputOutputFunctions).sort(comparePins),
     packages
   };

@@ -1,5 +1,7 @@
 export type PinType = "gpio" | "power" | "ground" | "reset" | "clock" | "boot" | "nc";
 
+export type FunctionSource = "gpio-af-csv" | "pinout-csv";
+
 export type PinFunction = {
   af: string;
   raw: string;
@@ -37,6 +39,7 @@ export type Chip = {
   displayName: string;
   vendor: string;
   family: string;
+  functionSource?: FunctionSource;
   pins: Pin[];
   packages: PackageLayout[];
 };
@@ -46,7 +49,8 @@ export type ChipManifestEntry = {
   vendor: string;
   family: string;
   displayName: string;
-  gpioAfCsv: string;
+  functionSource?: FunctionSource;
+  gpioAfCsv?: string;
   packages: Array<{
     name: string;
     pinoutCsv: string;

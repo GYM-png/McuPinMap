@@ -85,6 +85,9 @@ describe("projectPinMapConfig", () => {
     expect(createNextProjectPinMapId("Motor Control", new Set(["motor-control"]))).toBe(
       "motor-control-2"
     );
+    expect(
+      createNextProjectPinMapId("Motor Control", new Set(["motor-control", "motor-control-2"]))
+    ).toBe("motor-control-3");
     expect(createNextProjectPinMapId("   ", new Set())).toBe("pin-map");
     expect(createNextProjectPinMapId("CON", new Set())).toBe("pin-map-con");
   });

@@ -1,6 +1,14 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProjectPinMapStore, type WorkspaceFolderLike } from "../../src/extension/projectPinMapStore";
 import type { ProjectPinMapDocument } from "../../src/shared/projectPinMapConfig";
@@ -36,6 +44,12 @@ const createStore = (
 
 const readJson = (root: string, relativePath: string): unknown =>
   JSON.parse(readFileSync(join(root, relativePath), "utf8"));
+
+const writeJson = (root: string, relativePath: string, value: unknown): void => {
+  const path = join(root, relativePath);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+};
 
 afterEach(() => {
   for (const root of createdRoots.splice(0)) {
@@ -237,5 +251,97 @@ describe("ProjectPinMapStore", () => {
     });
     expect(existsSync(join(root, ".pinmap/index.json"))).toBe(true);
     expect(existsSync(join(root, ".pinmap/maps/new-map.json"))).toBe(true);
+  });
+
+  it("rejects path traversal map ids without writing outside maps", async () => {
+    const root = createRoot();
+    const store = createStore(root);
+    const unsafeMap: ProjectPinMapDocument = {
+      schemaVersion: 1,
+      id: "../escape",
+      name: "Escape",
+      mapView: "package",
+      assignments: [],
+      updatedAt: firstNow
+    };
+
+    const result = await store.saveMap(unsafeMap);
+
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Invalid project pin map id ../escape")
+    });
+    expect(existsSync(join(root, ".pinmap/escape.json"))).toBe(false);
+    expect(existsSync(join(root, "escape.json"))).toBe(false);
+  });
+
+  it("returns an error when an index contains an unsafe map id", async () => {
+    const root = createRoot();
+    const store = createStore(root);
+    writeJson(root, ".pinmap/index.json", {
+      schemaVersion: 1,
+      activeMapId: "../escape",
+      maps: [{ id: "../escape", name: "Escape", updatedAt: firstNow }]
+    });
+
+    const result = await store.listMaps();
+
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Failed to read .pinmap/index.json")
+    });
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Invalid project pin map id ../escape")
+    });
+  });
+
+  it("returns an error when duplicating an indexed source map whose file is missing", async () => {
+    const root = createRoot();
+    const store = createStore(root, [firstNow, secondNow]);
+
+    await store.createDefaultMap();
+    rmSync(join(root, ".pinmap/maps/default.json"));
+
+    const result = await store.duplicateMap("default", "Default Copy");
+
+    expect(result).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Failed to read .pinmap/maps/default.json")
+    });
+    expect(existsSync(join(root, ".pinmap/maps/default-copy.json"))).toBe(false);
+  });
+
+  it("uses the first workspace folder only", async () => {
+    const firstRoot = createRoot();
+    const secondRoot = createRoot();
+    const firstFolder: WorkspaceFolderLike = {
+      uri: { fsPath: firstRoot },
+      name: "First",
+      index: 0
+    };
+    const secondFolder: WorkspaceFolderLike = {
+      uri: { fsPath: secondRoot },
+      name: "Second",
+      index: 1
+    };
+    const store = new ProjectPinMapStore(() => [firstFolder, secondFolder], () => firstNow);
+
+    await store.createDefaultMap();
+
+    expect(existsSync(join(firstRoot, ".pinmap/index.json"))).toBe(true);
+    expect(existsSync(join(secondRoot, ".pinmap/index.json"))).toBe(false);
+  });
+
+  it("leaves no temporary files after successful writes", async () => {
+    const root = createRoot();
+    const store = createStore(root);
+
+    await store.createDefaultMap();
+
+    expect(readdirSync(join(root, ".pinmap"))).not.toContainEqual(expect.stringMatching(/\.tmp$/));
+    expect(readdirSync(join(root, ".pinmap/maps"))).not.toContainEqual(
+      expect.stringMatching(/\.tmp$/)
+    );
   });
 });

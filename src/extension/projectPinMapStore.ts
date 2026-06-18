@@ -1,6 +1,6 @@
-import { constants } from "node:fs";
+import { constants, renameSync, unlinkSync } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   createDefaultProjectPinMap,
   createNextProjectPinMapId,
@@ -28,6 +28,32 @@ type ReadIndexResult =
   | { kind: "ready"; index: ProjectPinMapIndex }
   | { kind: "empty" }
   | { kind: "error"; message: string };
+
+const safeMapIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const windowsReservedBasenames = new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9"
+]);
 
 export class ProjectPinMapStore {
   constructor(
@@ -93,6 +119,11 @@ export class ProjectPinMapStore {
       return { kind: "empty", index: indexResult.index };
     }
 
+    const idError = this.validateMapId(chosenMapId);
+    if (idError) {
+      return { kind: "error", message: idError };
+    }
+
     const mapResult = await this.readMap(root, chosenMapId);
     if (mapResult.kind === "error") {
       return mapResult;
@@ -117,6 +148,11 @@ export class ProjectPinMapStore {
     }
 
     const savedMap = parseProjectPinMapDocument({ ...map, updatedAt: this.now() });
+    const idError = this.validateMapId(savedMap.id);
+    if (idError) {
+      return { kind: "error", message: idError };
+    }
+
     const existingMap = await this.readOptionalMap(root, savedMap.id);
     if (existingMap.kind === "error") {
       return existingMap;
@@ -143,7 +179,9 @@ export class ProjectPinMapStore {
     }
 
     const source =
-      indexResult.kind === "ready" ? await this.readOptionalMap(root, sourceMapId) : undefined;
+      indexResult.kind === "ready" && indexResult.index.maps.length > 0
+        ? await this.readMap(root, sourceMapId)
+        : undefined;
     if (source?.kind === "error") {
       return source;
     }
@@ -190,7 +228,13 @@ export class ProjectPinMapStore {
 
     try {
       const json = JSON.parse(await readFile(absolutePath, "utf8"));
-      return { kind: "ready", index: parseProjectPinMapIndex(json) };
+      const index = parseProjectPinMapIndex(json);
+      const idError = this.validateIndexMapIds(index);
+      if (idError) {
+        throw new Error(idError);
+      }
+
+      return { kind: "ready", index };
     } catch (error) {
       return {
         kind: "error",
@@ -203,13 +247,27 @@ export class ProjectPinMapStore {
     root: string,
     mapId: string
   ): Promise<{ kind: "ready"; map: ProjectPinMapDocument } | { kind: "error"; message: string }> {
+    const idError = this.validateMapId(mapId);
+    if (idError) {
+      return {
+        kind: "error",
+        message: `Failed to read .pinmap/maps/${mapId}.json: ${idError}`
+      };
+    }
+
     const relativePath = `.pinmap/maps/${mapId}.json`;
 
     try {
       const json = JSON.parse(await readFile(join(root, relativePath), "utf8"));
+      const map = parseProjectPinMapDocument(json);
+      const mapIdError = this.validateMapId(map.id);
+      if (mapIdError) {
+        throw new Error(mapIdError);
+      }
+
       return {
         kind: "ready",
-        map: parseProjectPinMapDocument(json)
+        map
       };
     } catch (error) {
       return {
@@ -227,6 +285,14 @@ export class ProjectPinMapStore {
     | { kind: "empty" }
     | { kind: "error"; message: string }
   > {
+    const idError = this.validateMapId(mapId);
+    if (idError) {
+      return {
+        kind: "error",
+        message: `Failed to read .pinmap/maps/${mapId}.json: ${idError}`
+      };
+    }
+
     const absolutePath = this.mapPath(root, mapId);
     if (!(await this.exists(absolutePath))) {
       return { kind: "empty" };
@@ -258,9 +324,14 @@ export class ProjectPinMapStore {
     index: ProjectPinMapIndex,
     map: ProjectPinMapDocument
   ): Promise<void> {
+    const idError = this.validateMapId(map.id);
+    if (idError) {
+      throw new Error(idError);
+    }
+
     await mkdir(this.mapsDir(root), { recursive: true });
-    await writeFile(this.mapPath(root, map.id), `${JSON.stringify(map, null, 2)}\n`, "utf8");
-    await writeFile(this.indexPath(root), `${JSON.stringify(index, null, 2)}\n`, "utf8");
+    await this.writeJsonAtomically(this.mapPath(root, map.id), map);
+    await this.writeJsonAtomically(this.indexPath(root), index);
   }
 
   private indexPath(root: string): string {
@@ -275,6 +346,23 @@ export class ProjectPinMapStore {
     return join(root, ".pinmap", "maps");
   }
 
+  private async writeJsonAtomically(path: string, value: unknown): Promise<void> {
+    const tempPath = join(dirname(path), `${basename(path)}.${process.pid}.${Date.now()}.tmp`);
+
+    try {
+      await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+      renameSync(tempPath, path);
+    } catch (error) {
+      try {
+        unlinkSync(tempPath);
+      } catch {
+        // Best-effort cleanup; the original write error is more useful to callers.
+      }
+
+      throw error;
+    }
+  }
+
   private async exists(path: string): Promise<boolean> {
     try {
       await access(path, constants.F_OK);
@@ -286,5 +374,31 @@ export class ProjectPinMapStore {
 
   private errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+  }
+
+  private validateIndexMapIds(index: ProjectPinMapIndex): string | undefined {
+    if (index.activeMapId !== undefined) {
+      const activeMapIdError = this.validateMapId(index.activeMapId);
+      if (activeMapIdError) {
+        return activeMapIdError;
+      }
+    }
+
+    for (const map of index.maps) {
+      const mapIdError = this.validateMapId(map.id);
+      if (mapIdError) {
+        return mapIdError;
+      }
+    }
+
+    return undefined;
+  }
+
+  private validateMapId(mapId: string): string | undefined {
+    if (!safeMapIdPattern.test(mapId) || windowsReservedBasenames.has(mapId)) {
+      return `Invalid project pin map id ${mapId}.`;
+    }
+
+    return undefined;
   }
 }

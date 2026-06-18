@@ -1,4 +1,4 @@
-import type { ProjectPinMapSummary } from "../shared/projectPinMapConfig";
+﻿import type { ProjectPinMapSummary } from "../shared/projectPinMapConfig";
 
 export type PinMapLauncherState =
   | { kind: "no-workspace" }
@@ -14,35 +14,94 @@ const escapeHtml = (value: string): string =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-const renderLauncherBody = (state: PinMapLauncherState): string => {
-  switch (state.kind) {
-    case "no-workspace":
-      return `<p>Open a workspace folder to use project pin maps.</p>`;
+const renderSection = (title: string, content: string, className: string): string => `
+      <section class="launcher-section ${className}" aria-label="${escapeHtml(title)}">
+        <h2>${escapeHtml(title)}</h2>
+        ${content}
+      </section>`;
 
-    case "error":
-      return `<p class="error">${escapeHtml(state.message)}</p>`;
+const renderActionRow = (action: string, icon: string, label: string): string => `
+        <button type="button" class="launcher-row action-row" data-action="${escapeHtml(action)}">
+          <span class="launcher-row-icon">${escapeHtml(icon)}</span>
+          <span class="launcher-row-main">
+            <span class="launcher-row-title">${escapeHtml(label)}</span>
+          </span>
+        </button>`;
 
-    case "empty":
-      return `<p>No project pin maps have been created for this workspace.</p>
-      <button type="button" data-action="createDefaultMap">Create Default Map</button>`;
-
-    case "ready":
-      return `<div class="map-list">
-        ${state.maps
-          .map((map) => {
-            const isActive = map.id === state.activeMapId;
-            const chipId = map.chipId ?? "No chip selected";
-            return `<button type="button" class="map-row${isActive ? " active" : ""}" data-action="openProjectMap" data-map-id="${escapeHtml(map.id)}">
-              <span class="map-name">${escapeHtml(map.name)}</span>
-              <span class="map-meta">${escapeHtml(chipId)}</span>
-              <span class="map-meta">${escapeHtml(map.updatedAt)}</span>
-            </button>`;
-          })
-          .join("")}
-      </div>
-      <button type="button" data-action="newProjectMap">New Map</button>`;
+const renderActionsSection = (state: PinMapLauncherState): string => {
+  if (state.kind === "no-workspace") {
+    return renderSection(
+      "ACTIONS",
+      `<p class="empty-state">Open a workspace folder to create project pin maps.</p>`,
+      "launcher-section-actions"
+    );
   }
+
+  if (state.kind === "error") {
+    return renderSection(
+      "ACTIONS",
+      `<p class="empty-state">Fix the project pin map state before creating maps.</p>`,
+      "launcher-section-actions"
+    );
+  }
+
+  return renderSection(
+    "ACTIONS",
+    renderActionRow("createDefaultMap", "+", "Create Default Map"),
+    "launcher-section-actions"
+  );
 };
+
+const renderEmptyPinMaps = (message = "No local pin maps yet."): string =>
+  `<p class="empty-state">${escapeHtml(message)}</p>`;
+
+const renderMapRow = (map: ProjectPinMapSummary, isActive: boolean): string => {
+  const chipId = map.chipId ?? "No chip selected";
+
+  return `<button type="button" class="launcher-row map-row${isActive ? " active" : ""}" data-action="openProjectMap" data-map-id="${escapeHtml(map.id)}">
+          <span class="launcher-row-icon" aria-hidden="true">&#9635;</span>
+          <span class="launcher-row-main">
+            <span class="launcher-row-title">${escapeHtml(map.name)}</span>
+            <span class="launcher-row-meta">${escapeHtml(chipId)} &middot; updated ${escapeHtml(map.updatedAt)}</span>
+          </span>
+        </button>`;
+};
+
+const renderPinMapsSection = (state: PinMapLauncherState): string => {
+  if (state.kind === "no-workspace") {
+    return renderSection(
+      "PIN MAPS",
+      renderEmptyPinMaps("Open a workspace folder to load local pin maps."),
+      "launcher-section-pin-maps"
+    );
+  }
+
+  if (state.kind === "error") {
+    return renderSection(
+      "PIN MAPS",
+      `<p class="error">${escapeHtml(state.message)}</p>`,
+      "launcher-section-pin-maps"
+    );
+  }
+
+  if (state.kind === "empty") {
+    return renderSection("PIN MAPS", renderEmptyPinMaps(), "launcher-section-pin-maps");
+  }
+
+  const rows = state.maps
+    .map((map) => renderMapRow(map, map.id === state.activeMapId))
+    .join("");
+
+  return renderSection(
+    "PIN MAPS",
+    rows.length > 0 ? `<div class="map-list">${rows}</div>` : renderEmptyPinMaps(),
+    "launcher-section-pin-maps"
+  );
+};
+
+const renderLauncherBody = (state: PinMapLauncherState): string =>
+  `${renderActionsSection(state)}
+      ${renderPinMapsSection(state)}`;
 
 export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherState): string => `<!DOCTYPE html>
 <html lang="en">
@@ -52,10 +111,13 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';" />
     <title>McuPinMap</title>
     <style>
-      body {
+      * {
         box-sizing: border-box;
+      }
+
+      body {
         margin: 0;
-        padding: 16px;
+        padding: 10px 0;
         color: var(--vscode-foreground);
         background: var(--vscode-sideBar-background);
         font-family: var(--vscode-font-family);
@@ -64,15 +126,27 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
 
       .container {
         display: flex;
-        min-height: calc(100vh - 32px);
+        min-height: calc(100vh - 20px);
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
       }
 
       h1 {
         margin: 0;
-        font-size: 16px;
+        padding: 0 12px 2px;
+        font-size: 13px;
         font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      h2 {
+        margin: 0 0 4px;
+        padding: 0 12px;
+        color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.6;
+        text-transform: uppercase;
       }
 
       p {
@@ -82,53 +156,93 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
       }
 
       button {
-        width: 100%;
-        border: 0;
-        border-radius: 2px;
-        padding: 8px 10px;
-        color: var(--vscode-button-foreground);
-        background: var(--vscode-button-background);
-        cursor: pointer;
         font: inherit;
       }
 
-      button:hover {
-        background: var(--vscode-button-hoverBackground);
+      .launcher-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 4px 0 8px;
+      }
+
+      .launcher-section + .launcher-section {
+        border-top: 1px solid var(--vscode-sideBarSectionHeader-border, rgba(128, 128, 128, 0.25));
+        padding-top: 8px;
+      }
+
+      .launcher-row {
+        display: grid;
+        width: 100%;
+        grid-template-columns: 20px minmax(0, 1fr);
+        align-items: center;
+        gap: 4px;
+        border: 0;
+        border-radius: 0;
+        padding: 3px 12px;
+        color: var(--vscode-foreground);
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .launcher-row:hover,
+      .launcher-row.active {
+        background: var(--vscode-list-hoverBackground);
+      }
+
+      .launcher-row.active {
+        color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+        background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
+      }
+
+      .launcher-row-icon {
+        display: inline-flex;
+        min-width: 20px;
+        align-items: center;
+        justify-content: center;
+        color: var(--vscode-symbolIcon-functionForeground, var(--vscode-foreground));
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      .action-row .launcher-row-icon {
+        font-size: 18px;
+      }
+
+      .launcher-row-main {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 1px;
+      }
+
+      .launcher-row-title,
+      .launcher-row-meta {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .launcher-row-title {
+        font-weight: 400;
+      }
+
+      .launcher-row-meta,
+      .empty-state {
+        color: var(--vscode-descriptionForeground);
+        font-size: 12px;
+      }
+
+      .empty-state,
+      .error {
+        padding: 2px 12px;
       }
 
       .map-list {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-      }
-
-      .map-row {
-        display: flex;
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 3px;
-        border: 1px solid var(--vscode-sideBarSectionHeader-border);
-        color: var(--vscode-foreground);
-        background: transparent;
-        text-align: left;
-      }
-
-      .map-row:hover,
-      .map-row.active {
-        background: var(--vscode-list-hoverBackground);
-      }
-
-      .map-row.active {
-        border-color: var(--vscode-focusBorder);
-      }
-
-      .map-name {
-        font-weight: 600;
-      }
-
-      .map-meta {
-        color: var(--vscode-descriptionForeground);
-        font-size: 12px;
+        gap: 1px;
       }
 
       .error {

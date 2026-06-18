@@ -17,7 +17,7 @@ import { importLocalCsvWithDialog } from "./csvImport";
 import { renderAssignmentsAsJson, renderAssignmentsAsMarkdown } from "./exportConfig";
 import type { ProjectPinMapStore, ProjectPinMapStoreResult } from "./projectPinMapStore";
 import { RemoteChipRegistry } from "./remoteChipRegistry";
-import { getNonce, renderPinMapLauncherHtml } from "./sidebarLauncher";
+import { getNonce, renderPinMapLauncherHtml, type PinMapLauncherState } from "./sidebarLauncher";
 
 const ASSIGNMENTS_KEY = "mcupinmap.assignments";
 
@@ -30,6 +30,26 @@ export type OpenPinMapPanelOptions = {
 
 type PinMapWebviewController = {
   selectProjectMap: (mapId: string) => void;
+};
+
+export const toLauncherState = (result: ProjectPinMapStoreResult): PinMapLauncherState => {
+  switch (result.kind) {
+    case "ready":
+      return {
+        kind: "ready",
+        maps: result.index.maps,
+        activeMapId: result.index.activeMapId
+      };
+
+    case "empty":
+      return { kind: "empty" };
+
+    case "no-workspace":
+      return { kind: "no-workspace" };
+
+    case "error":
+      return { kind: "error", message: result.message };
+  }
 };
 
 export const openPinMapPanel = (
@@ -84,12 +104,52 @@ export class PinMapViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true
     };
 
-    webviewView.webview.html = renderPinMapLauncherHtml(getNonce());
+    const renderLauncher = (state: PinMapLauncherState): void => {
+      webviewView.webview.html = renderPinMapLauncherHtml(getNonce(), state);
+    };
+
+    void (async () => {
+      renderLauncher(toLauncherState(await this.projectPinMapStore.listMaps()));
+    })();
+
     webviewView.webview.onDidReceiveMessage(
-      (message: { type?: string }) => {
-        if (message.type === "openPinMap") {
-          openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore);
-        }
+      (message: { type?: string; mapId?: string }) => {
+        void (async () => {
+          switch (message.type) {
+            case "openProjectMap":
+              if (message.mapId) {
+                openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore, {
+                  mapId: message.mapId
+                });
+              }
+              break;
+
+            case "createDefaultMap": {
+              const result = await this.projectPinMapStore.createDefaultMap();
+              if (result.kind === "ready" && result.activeMap) {
+                openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore, {
+                  mapId: result.activeMap.id
+                });
+              }
+              renderLauncher(toLauncherState(result));
+              break;
+            }
+
+            case "newProjectMap": {
+              const result = await this.projectPinMapStore.duplicateMap(
+                undefined as unknown as string,
+                "New Map"
+              );
+              if (result.kind === "ready" && result.activeMap) {
+                openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore, {
+                  mapId: result.activeMap.id
+                });
+              }
+              renderLauncher(toLauncherState(result));
+              break;
+            }
+          }
+        })();
       },
       undefined,
       this.context.subscriptions

@@ -52,6 +52,32 @@ export const toLauncherState = (result: ProjectPinMapStoreResult): PinMapLaunche
   }
 };
 
+type SidebarLauncherMessage =
+  | { type: "openProjectMap"; mapId: string }
+  | { type: "createDefaultMap" }
+  | { type: "newProjectMap" };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object";
+
+const parseSidebarLauncherMessage = (message: unknown): SidebarLauncherMessage | undefined => {
+  if (!isRecord(message) || typeof message.type !== "string") {
+    return undefined;
+  }
+
+  if (message.type === "openProjectMap") {
+    return typeof message.mapId === "string" && message.mapId.length > 0
+      ? { type: "openProjectMap", mapId: message.mapId }
+      : undefined;
+  }
+
+  if (message.type === "createDefaultMap" || message.type === "newProjectMap") {
+    return { type: message.type };
+  }
+
+  return undefined;
+};
+
 export const openPinMapPanel = (
   context: vscode.ExtensionContext,
   chipRepository: ChipRepository,
@@ -113,16 +139,24 @@ export class PinMapViewProvider implements vscode.WebviewViewProvider {
     })();
 
     webviewView.webview.onDidReceiveMessage(
-      (message: { type?: string; mapId?: string }) => {
+      (message: unknown) => {
+        const launcherMessage = parseSidebarLauncherMessage(message);
+        if (!launcherMessage) {
+          return;
+        }
+
         void (async () => {
-          switch (message.type) {
-            case "openProjectMap":
-              if (message.mapId) {
+          switch (launcherMessage.type) {
+            case "openProjectMap": {
+              const result = await this.projectPinMapStore.selectMap(launcherMessage.mapId);
+              renderLauncher(toLauncherState(result));
+              if (result.kind === "ready" && result.activeMap) {
                 openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore, {
-                  mapId: message.mapId
+                  mapId: result.activeMap.id
                 });
               }
               break;
+            }
 
             case "createDefaultMap": {
               const result = await this.projectPinMapStore.createDefaultMap();

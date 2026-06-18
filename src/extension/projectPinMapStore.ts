@@ -136,6 +136,40 @@ export class ProjectPinMapStore {
     };
   }
 
+  async selectMap(mapId: string): Promise<ProjectPinMapStoreResult> {
+    const root = this.workspaceRoot();
+    if (!root) {
+      return { kind: "no-workspace" };
+    }
+
+    const indexResult = await this.readIndex(root);
+    if (indexResult.kind !== "ready") {
+      return indexResult;
+    }
+
+    const idError = this.validateMapId(mapId);
+    if (idError) {
+      return { kind: "error", message: idError };
+    }
+
+    const mapResult = await this.readMap(root, mapId);
+    if (mapResult.kind === "error") {
+      return mapResult;
+    }
+
+    const nextIndex = parseProjectPinMapIndex({
+      ...indexResult.index,
+      activeMapId: mapId
+    });
+    await this.writeJsonAtomically(this.indexPath(root), nextIndex);
+
+    return {
+      kind: "ready",
+      index: nextIndex,
+      activeMap: mapResult.map
+    };
+  }
+
   async saveMap(map: ProjectPinMapDocument): Promise<ProjectPinMapStoreResult> {
     const root = this.workspaceRoot();
     if (!root) {

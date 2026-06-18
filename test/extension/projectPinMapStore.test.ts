@@ -299,6 +299,34 @@ describe("ProjectPinMapStore", () => {
     expect(result.kind === "ready" ? result.activeMap?.chipId : undefined).toBeUndefined();
   });
 
+  it("selects a map by persisting the active map id without rewriting the map", async () => {
+    const root = createRoot();
+    const store = createStore(root, [firstNow, secondNow]);
+
+    await store.createDefaultMap();
+    await store.duplicateMap("default", "Board Bringup");
+    const selected = await store.selectMap("default");
+
+    expect(selected).toMatchObject({
+      kind: "ready",
+      index: {
+        activeMapId: "default",
+        maps: [
+          { id: "default", name: "Default", updatedAt: firstNow },
+          { id: "board-bringup", name: "Board Bringup", updatedAt: secondNow }
+        ]
+      },
+      activeMap: { id: "default", updatedAt: firstNow }
+    });
+    expect(readJson(root, ".pinmap/index.json")).toMatchObject({
+      activeMapId: "default"
+    });
+    expect(readJson(root, ".pinmap/maps/default.json")).toMatchObject({
+      id: "default",
+      updatedAt: firstNow
+    });
+  });
+
   it("rejects path traversal map ids without writing outside maps", async () => {
     const root = createRoot();
     const store = createStore(root);

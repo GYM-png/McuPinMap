@@ -215,6 +215,20 @@ small {
   justify-items: end;
 }
 
+.map-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.map-panel.is-package-view .map-heading {
+  justify-items: center;
+  text-align: center;
+}
+
+.map-panel.is-package-view .map-title-row {
+  margin-bottom: 8px;
+}
+
 .map-view-toggle {
   display: inline-flex;
   padding: 3px;
@@ -444,6 +458,14 @@ button:focus-visible {
   display: flex;
   gap: 8px;
   margin-bottom: 0;
+}
+
+.map-heading .summary-pills {
+  margin-top: 2px;
+}
+
+.map-panel.is-package-view .summary-pills {
+  justify-content: center;
 }
 
 .summary-pills div {

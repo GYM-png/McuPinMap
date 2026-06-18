@@ -69,11 +69,28 @@ export const LogicalPinMap = (): JSX.Element => {
   }
 
   return (
-    <section className="panel map-panel" aria-labelledby="logical-map-title">
+    <section
+      className={`panel map-panel${mapView === "package" ? " is-package-view" : ""}`}
+      aria-labelledby="logical-map-title"
+    >
       <div className="map-title-row">
-        <div>
+        <div className="map-heading">
           <p className="eyebrow">{mapView === "package" ? "Package Map" : "Logical Map"}</p>
           <h2 id="logical-map-title">{chip.displayName}</h2>
+          <dl className="summary-pills" aria-label="Map summary">
+            <div>
+              <dt>{mapView === "package" ? "Pads" : "Pins"}</dt>
+              <dd>{mapView === "package" ? selectedPackage?.totalPads ?? 0 : chip.pins.length}</dd>
+            </div>
+            <div>
+              <dt>Assigned</dt>
+              <dd>{assignedPins.size}</dd>
+            </div>
+            <div>
+              <dt>Conflicts</dt>
+              <dd>{conflicts.length}</dd>
+            </div>
+          </dl>
         </div>
         <div className="map-toolbar">
           <div className="map-view-toggle" aria-label="Map view">
@@ -119,20 +136,6 @@ export const LogicalPinMap = (): JSX.Element => {
             </select>
           ) : null}
 
-          <dl className="summary-pills" aria-label="Map summary">
-            <div>
-              <dt>{mapView === "package" ? "Pads" : "Pins"}</dt>
-              <dd>{mapView === "package" ? selectedPackage?.totalPads ?? 0 : chip.pins.length}</dd>
-            </div>
-            <div>
-              <dt>Assigned</dt>
-              <dd>{assignedPins.size}</dd>
-            </div>
-            <div>
-              <dt>Conflicts</dt>
-              <dd>{conflicts.length}</dd>
-            </div>
-          </dl>
         </div>
       </div>
 

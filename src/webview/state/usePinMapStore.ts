@@ -57,6 +57,31 @@ type PinMapState = {
 const searchChip = (chip: Chip | undefined, query: string): SearchResult[] =>
   chip ? createSearchIndex(chip).search(query) : [];
 
+const clearWorkspaceForProjectMap = (
+  state: PinMapState,
+  map: ProjectPinMapSummary | undefined
+): Partial<PinMapState> => {
+  if (!map) {
+    return {};
+  }
+
+  const mapChanged = map.id !== state.activeProjectMap?.id;
+  const chipChanged = map.chipId !== state.selectedChipId;
+  if (!mapChanged && !chipChanged) {
+    return {};
+  }
+
+  return {
+    chip: map.chipId && state.chip?.id === map.chipId ? state.chip : undefined,
+    selectedChipId: map.chipId,
+    selectedPinName: undefined,
+    selectedPackageName: undefined,
+    searchResults: [],
+    assignments: [],
+    conflicts: []
+  };
+};
+
 export const usePinMapStore = create<PinMapState>((set, get) => ({
   chips: [],
   projectMaps: [],
@@ -72,7 +97,11 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
   conflicts: [],
   setChips: (chips, selectedChipId) =>
     set((state) => {
-      const nextSelectedChipId = selectedChipId ?? chips[0]?.id;
+      const shouldAutoSelectFirstChip = !state.activeProjectMap && selectedChipId === undefined;
+      const nextSelectedChipId =
+        selectedChipId ??
+        state.activeProjectMap?.chipId ??
+        (shouldAutoSelectFirstChip ? chips[0]?.id : undefined);
       const hasSelectedChip = nextSelectedChipId
         ? chips.some((chip) => chip.id === nextSelectedChipId)
         : false;
@@ -122,7 +151,11 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
         projectMaps.find((map) => map.id === state.activeProjectMap?.id) ??
         projectMaps[0];
 
-      return { projectMaps, activeProjectMap };
+      return {
+        projectMaps,
+        activeProjectMap,
+        ...clearWorkspaceForProjectMap(state, activeProjectMap)
+      };
     }),
   setProjectMap: (activeProjectMap) =>
     set((state) => {
@@ -132,7 +165,11 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
           ? [...state.projectMaps, activeProjectMap]
           : state.projectMaps.map((map, index) => (index === existingIndex ? activeProjectMap : map));
 
-      return { projectMaps, activeProjectMap };
+      return {
+        projectMaps,
+        activeProjectMap,
+        ...clearWorkspaceForProjectMap(state, activeProjectMap)
+      };
     }),
   setProjectMapViewState: (mapView, selectedPackageName) =>
     set((state) => ({

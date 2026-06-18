@@ -161,6 +161,59 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
   });
 
+  it("clears stale chip workspace state when switching to a project map without a chip", () => {
+    const store = usePinMapStore.getState();
+    const assignedMap = createProjectMap("assigned", "Assigned");
+    const emptyMap = createProjectMap("empty", "Empty");
+
+    store.setProjectMap({ ...assignedMap, chipId: "gd32f407" });
+    store.setChips(
+      [{ id: "gd32f407", displayName: "GD32F407", vendor: "GigaDevice", family: "GD32F4" }],
+      "gd32f407"
+    );
+    store.setChip(createChip([lqfp100]));
+    store.selectPin("PA0");
+    store.setSelectedPackageName("LQFP100");
+    store.setAssignments(
+      [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ],
+      []
+    );
+
+    store.setProjectMap(emptyMap);
+
+    expect(usePinMapStore.getState()).toMatchObject({
+      chip: undefined,
+      selectedChipId: undefined,
+      selectedPinName: undefined,
+      selectedPackageName: undefined,
+      searchResults: [],
+      assignments: [],
+      conflicts: []
+    });
+  });
+
+  it("does not auto-select the first installed chip for a project map without a chip", () => {
+    const store = usePinMapStore.getState();
+
+    store.setProjectMap(createProjectMap("empty", "Empty"));
+    store.setChips([
+      { id: "gd32f407", displayName: "GD32F407", vendor: "GigaDevice", family: "GD32F4" }
+    ]);
+
+    expect(usePinMapStore.getState().selectedChipId).toBeUndefined();
+    expect(usePinMapStore.getState().chip).toBeUndefined();
+  });
+
   it("creates a project map document from the current workspace state", () => {
     const store = usePinMapStore.getState();
 

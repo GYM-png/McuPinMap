@@ -171,4 +171,185 @@ describe("handleExtensionMessage", () => {
     expect(usePinMapStore.getState().downloadingChipId).toBeUndefined();
     expect(usePinMapStore.getState().importingCsv).toBe(false);
   });
+
+  it("loads a project pin map and marks the save state as saved", () => {
+    let error = "previous error";
+
+    handleExtensionMessage(
+      {
+        type: "projectMapLoaded",
+        map: {
+          id: "default",
+          name: "Default",
+          updatedAt: "2026-06-18T00:00:00.000Z"
+        }
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(error).toBe("");
+    expect(usePinMapStore.getState().activeProjectMap).toEqual({
+      id: "default",
+      name: "Default",
+      updatedAt: "2026-06-18T00:00:00.000Z"
+    });
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
+  });
+
+  it("restores saved project pin map view state", () => {
+    handleExtensionMessage(
+      {
+        type: "projectMapLoaded",
+        map: {
+          id: "default",
+          name: "Default",
+          updatedAt: "2026-06-18T00:00:00.000Z"
+        },
+        mapView: "logical",
+        selectedPackageName: "LQFP144"
+      },
+      () => undefined,
+      () => undefined
+    );
+
+    expect(usePinMapStore.getState().mapView).toBe("logical");
+    expect(usePinMapStore.getState().selectedPackageName).toBe("LQFP144");
+  });
+
+  it("clears stale package selection when a project map has none", () => {
+    usePinMapStore.getState().setSelectedPackageName("LQFP144");
+
+    handleExtensionMessage(
+      {
+        type: "projectMapLoaded",
+        map: {
+          id: "default",
+          name: "Default",
+          updatedAt: "2026-06-18T00:00:00.000Z"
+        },
+        mapView: "logical"
+      },
+      () => undefined,
+      () => undefined
+    );
+
+    expect(usePinMapStore.getState().selectedPackageName).toBeUndefined();
+  });
+
+  it("tracks project pin map save start and failure messages", () => {
+    let error = "";
+
+    handleExtensionMessage(
+      {
+        type: "projectMapSaveStarted"
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saving");
+
+    handleExtensionMessage(
+      {
+        type: "projectMapSaveFailed",
+        message: "save failed"
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(error).toBe("save failed");
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("failed");
+  });
+
+  it("keeps project pin map save failures visible after assignment refreshes", () => {
+    let error = "";
+
+    handleExtensionMessage(
+      {
+        type: "projectMapSaveFailed",
+        message: "save failed"
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    handleExtensionMessage(
+      {
+        type: "assignmentsUpdated",
+        assignments: [],
+        conflicts: []
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(error).toBe("save failed");
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("failed");
+  });
+
+  it("loads project pin map lists and preserves the active map when possible", () => {
+    const firstMap = {
+      id: "default",
+      name: "Default",
+      updatedAt: "2026-06-18T00:00:00.000Z"
+    };
+    const secondMap = {
+      id: "motor",
+      name: "Motor Control",
+      updatedAt: "2026-06-18T00:01:00.000Z"
+    };
+    let error = "previous error";
+    const clearError = (): void => {
+      error = "";
+    };
+
+    handleExtensionMessage(
+      {
+        type: "projectMapsLoaded",
+        maps: [firstMap, secondMap],
+        activeMapId: "motor"
+      },
+      clearError,
+      (message) => {
+        error = message;
+      }
+    );
+    expect(error).toBe("");
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+
+    handleExtensionMessage(
+      {
+        type: "projectMapsLoaded",
+        maps: [firstMap, secondMap]
+      },
+      clearError,
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+  });
 });

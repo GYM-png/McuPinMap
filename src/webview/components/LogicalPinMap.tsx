@@ -1,5 +1,6 @@
 import type { Pin } from "../../shared/types";
 import { usePinMapStore } from "../state/usePinMapStore";
+import { vscode } from "../vscodeApi";
 import { PackageMap } from "./PackageMap";
 
 type PortGroup = {
@@ -22,6 +23,13 @@ const groupPinsByPort = (pins: Pin[]): PortGroup[] => {
       pins: [...portPins].sort((left, right) => left.number - right.number)
     }))
     .sort((left, right) => left.port.localeCompare(right.port));
+};
+
+const postProjectMapSave = (): void => {
+  const map = usePinMapStore.getState().createProjectMapDocument();
+  if (map) {
+    vscode.postMessage({ type: "saveProjectMap", map });
+  }
 };
 
 export const LogicalPinMap = (): JSX.Element => {
@@ -72,7 +80,10 @@ export const LogicalPinMap = (): JSX.Element => {
             <button
               type="button"
               className={mapView === "logical" ? "is-active" : undefined}
-              onClick={() => setMapView("logical")}
+              onClick={() => {
+                setMapView("logical");
+                postProjectMapSave();
+              }}
             >
               Logical
             </button>
@@ -80,7 +91,10 @@ export const LogicalPinMap = (): JSX.Element => {
               <button
                 type="button"
                 className={mapView === "package" ? "is-active" : undefined}
-                onClick={() => setMapView("package")}
+                onClick={() => {
+                  setMapView("package");
+                  postProjectMapSave();
+                }}
               >
                 Package
               </button>
@@ -92,7 +106,10 @@ export const LogicalPinMap = (): JSX.Element => {
               className="package-selector"
               aria-label="Select package"
               value={selectedPackageName ?? ""}
-              onChange={(event) => setSelectedPackageName(event.target.value)}
+              onChange={(event) => {
+                setSelectedPackageName(event.target.value);
+                postProjectMapSave();
+              }}
             >
               {chip.packages.map((layout) => (
                 <option key={layout.packageName} value={layout.packageName}>

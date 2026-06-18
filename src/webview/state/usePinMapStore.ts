@@ -1,15 +1,23 @@
 import { create } from "zustand";
 import type { RemoteChipSummary } from "../../shared/data/remoteChipIndex";
 import { createSearchIndex, type SearchResult } from "../../shared/data/searchIndex";
+import type {
+  ProjectPinMapDocument,
+  ProjectPinMapSummary
+} from "../../shared/projectPinMapConfig";
 import type { Assignment, Chip, ChipSummary, Conflict, Pin } from "../../shared/types";
 
 export type MapView = "logical" | "package";
 export type RemoteSearchStatus = "idle" | "loading" | "ready";
+export type ProjectMapSaveStatus = "idle" | "saving" | "saved" | "failed";
 
 type PinMapState = {
   chips: ChipSummary[];
   chip?: Chip;
   selectedChipId?: string;
+  projectMaps: ProjectPinMapSummary[];
+  activeProjectMap?: ProjectPinMapSummary;
+  projectMapSaveStatus: ProjectMapSaveStatus;
   remoteQuery: string;
   remoteChips: RemoteChipSummary[];
   remoteSearchStatus: RemoteSearchStatus;
@@ -24,6 +32,11 @@ type PinMapState = {
   conflicts: Conflict[];
   setChips: (chips: ChipSummary[], selectedChipId?: string) => void;
   setChip: (chip: Chip) => void;
+  setProjectMaps: (maps: ProjectPinMapSummary[], activeMapId?: string) => void;
+  setProjectMap: (map: ProjectPinMapSummary) => void;
+  setProjectMapViewState: (mapView?: MapView, selectedPackageName?: string) => void;
+  setProjectMapSaveStatus: (status: ProjectMapSaveStatus) => void;
+  createProjectMapDocument: () => ProjectPinMapDocument | undefined;
   setRemoteQuery: (query: string) => void;
   setRemoteSearchLoading: () => void;
   setRemoteSearchResults: (query: string, chips: RemoteChipSummary[]) => void;
@@ -46,6 +59,8 @@ const searchChip = (chip: Chip | undefined, query: string): SearchResult[] =>
 
 export const usePinMapStore = create<PinMapState>((set, get) => ({
   chips: [],
+  projectMaps: [],
+  projectMapSaveStatus: "idle",
   remoteQuery: "",
   remoteChips: [],
   remoteSearchStatus: "idle",
@@ -98,6 +113,50 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
         searchResults: searchChip(chip, state.query)
       };
     }),
+  setProjectMaps: (projectMaps, activeMapId) =>
+    set((state) => {
+      const activeProjectMap =
+        (activeMapId
+          ? projectMaps.find((map) => map.id === activeMapId)
+          : undefined) ??
+        projectMaps.find((map) => map.id === state.activeProjectMap?.id) ??
+        projectMaps[0];
+
+      return { projectMaps, activeProjectMap };
+    }),
+  setProjectMap: (activeProjectMap) =>
+    set((state) => {
+      const existingIndex = state.projectMaps.findIndex((map) => map.id === activeProjectMap.id);
+      const projectMaps =
+        existingIndex === -1
+          ? [...state.projectMaps, activeProjectMap]
+          : state.projectMaps.map((map, index) => (index === existingIndex ? activeProjectMap : map));
+
+      return { projectMaps, activeProjectMap };
+    }),
+  setProjectMapViewState: (mapView, selectedPackageName) =>
+    set((state) => ({
+      mapView: mapView ?? state.mapView,
+      selectedPackageName
+    })),
+  setProjectMapSaveStatus: (projectMapSaveStatus) => set({ projectMapSaveStatus }),
+  createProjectMapDocument: () => {
+    const state = get();
+    if (!state.activeProjectMap) {
+      return undefined;
+    }
+
+    return {
+      schemaVersion: 1,
+      id: state.activeProjectMap.id,
+      name: state.activeProjectMap.name,
+      chipId: state.selectedChipId,
+      selectedPackageName: state.selectedPackageName,
+      mapView: state.mapView,
+      assignments: state.assignments,
+      updatedAt: state.activeProjectMap.updatedAt
+    };
+  },
   setRemoteQuery: (remoteQuery) => set({ remoteQuery }),
   setRemoteSearchLoading: () => set({ remoteSearchStatus: "loading" }),
   setRemoteSearchResults: (query, remoteChips) =>

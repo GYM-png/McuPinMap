@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { ProjectPinMapSummary } from "../../src/shared/projectPinMapConfig";
 import type { Chip } from "../../src/shared/types";
 import { usePinMapStore } from "../../src/webview/state/usePinMapStore";
 
@@ -27,6 +28,12 @@ const lqfp144: Chip["packages"][number] = {
   totalPads: 144,
   pins: []
 };
+
+const createProjectMap = (id: string, name: string): ProjectPinMapSummary => ({
+  id,
+  name,
+  updatedAt: `2026-06-18T00:00:00.000Z-${id}`
+});
 
 afterEach(() => {
   usePinMapStore.setState(usePinMapStore.getInitialState(), true);
@@ -116,5 +123,92 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().importingCsv).toBe(true);
     store.finishImport();
     expect(usePinMapStore.getState().importingCsv).toBe(false);
+  });
+
+  it("selects the requested project map when project maps are loaded", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const secondMap = createProjectMap("motor", "Motor Control");
+
+    usePinMapStore.getState().setProjectMaps([firstMap, secondMap], "motor");
+
+    expect(usePinMapStore.getState().projectMaps).toEqual([firstMap, secondMap]);
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+  });
+
+  it("preserves the active project map when a reload omits an active id", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const secondMap = createProjectMap("motor", "Motor Control");
+
+    const store = usePinMapStore.getState();
+    store.setProjectMaps([firstMap, secondMap], "motor");
+    store.setProjectMaps([firstMap, secondMap]);
+
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+  });
+
+  it("tracks project map upserts and save status", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const renamedMap = createProjectMap("default", "Renamed");
+
+    const store = usePinMapStore.getState();
+    store.setProjectMap(firstMap);
+    store.setProjectMapSaveStatus("saving");
+    store.setProjectMap(renamedMap);
+    store.setProjectMapSaveStatus("saved");
+
+    expect(usePinMapStore.getState().projectMaps).toEqual([renamedMap]);
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(renamedMap);
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
+  });
+
+  it("creates a project map document from the current workspace state", () => {
+    const store = usePinMapStore.getState();
+
+    store.setProjectMap({
+      id: "default",
+      name: "Default",
+      chipId: "gd32f407",
+      updatedAt: "2026-06-18T12:00:00.000Z"
+    });
+    store.setChips(
+      [{ id: "gd32f407", displayName: "GD32F407", vendor: "GigaDevice", family: "GD32F4" }],
+      "gd32f407"
+    );
+    store.setChip(createChip([lqfp100]));
+    store.setAssignments(
+      [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ],
+      []
+    );
+
+    expect(store.createProjectMapDocument()).toEqual({
+      schemaVersion: 1,
+      id: "default",
+      name: "Default",
+      chipId: "gd32f407",
+      selectedPackageName: "LQFP100",
+      mapView: "package",
+      assignments: [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ],
+      updatedAt: "2026-06-18T12:00:00.000Z"
+    });
   });
 });

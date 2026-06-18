@@ -48,7 +48,8 @@
       "mcupinmap": [
         {
           "id": "mcupinmap.pinMapView",
-          "name": "Pin Map"
+          "name": "Pin Map",
+          "type": "webview"
         }
       ]
     },

@@ -54,6 +54,7 @@ export const toLauncherState = (result: ProjectPinMapStoreResult): PinMapLaunche
 
 type SidebarLauncherMessage =
   | { type: "openProjectMap"; mapId: string }
+  | { type: "requestRenameProjectMap"; mapId: string; mapName?: string }
   | { type: "createDefaultMap" }
   | { type: "newProjectMap" };
 
@@ -68,6 +69,16 @@ const parseSidebarLauncherMessage = (message: unknown): SidebarLauncherMessage |
   if (message.type === "openProjectMap") {
     return typeof message.mapId === "string" && message.mapId.length > 0
       ? { type: "openProjectMap", mapId: message.mapId }
+      : undefined;
+  }
+
+  if (message.type === "requestRenameProjectMap") {
+    return typeof message.mapId === "string" && message.mapId.length > 0
+      ? {
+          type: "requestRenameProjectMap",
+          mapId: message.mapId,
+          mapName: typeof message.mapName === "string" ? message.mapName : undefined
+        }
       : undefined;
   }
 
@@ -166,6 +177,27 @@ export class PinMapViewProvider implements vscode.WebviewViewProvider {
                 });
               }
               renderLauncher(toLauncherState(result));
+              break;
+            }
+
+            case "requestRenameProjectMap": {
+              const name = await vscode.window.showInputBox({
+                title: "Rename Project Map",
+                prompt: "Enter a project pin map name.",
+                value: launcherMessage.mapName
+              });
+              if (!name?.trim()) {
+                break;
+              }
+
+              const result = await this.projectPinMapStore.renameMap(
+                launcherMessage.mapId,
+                name.trim()
+              );
+              renderLauncher(toLauncherState(result));
+              if (result.kind === "ready" && result.activeMap) {
+                currentPinMapController?.selectProjectMap(result.activeMap.id);
+              }
               break;
             }
 
@@ -422,6 +454,35 @@ const initializePinMapWebview = (
     );
 
     return projectPinMapStore.saveMap(map);
+  };
+
+  const requestRenameProjectMap = async (mapId: string, mapName?: string): Promise<void> => {
+    const name = await vscode.window.showInputBox({
+      title: "Rename Project Map",
+      prompt: "Enter a project pin map name.",
+      value: mapName
+    });
+    if (!name?.trim()) {
+      return;
+    }
+
+    const result = await projectPinMapStore.renameMap(mapId, name.trim());
+    postProjectMapsLoaded(result);
+
+    if (result.kind === "ready" && result.activeMap) {
+      activateProjectMap(result.activeMap);
+      postMessage({
+        type: "projectMapSaved",
+        map: summarizeProjectPinMap(result.activeMap)
+      });
+      postChipLoaded();
+      return;
+    }
+
+    postMessage({
+      type: "projectMapSaveFailed",
+      message: projectMapStoreErrorMessage(result)
+    });
   };
 
   webview.html = getHtml(webview, context.extensionUri);
@@ -687,6 +748,10 @@ const initializePinMapWebview = (
 
           break;
         }
+
+        case "requestRenameProjectMap":
+          await requestRenameProjectMap(message.mapId, message.mapName);
+          break;
 
         case "renameProjectMap": {
           const result = await projectPinMapStore.renameMap(message.mapId, message.name);

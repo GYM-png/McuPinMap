@@ -7,6 +7,7 @@ const webviewPanelSource = readFileSync(
   join(process.cwd(), "src", "extension", "webviewPanel.ts"),
   "utf8"
 );
+const appSource = readFileSync(join(process.cwd(), "src", "webview", "App.tsx"), "utf8");
 
 describe("VS Code sidebar contribution", () => {
   test("contributes an activity bar container for McuPinMap", () => {
@@ -35,5 +36,13 @@ describe("VS Code sidebar contribution", () => {
       name: "Pin Map",
       type: "webview"
     });
+  });
+
+  test("routes project map rename requests through extension-host input boxes", () => {
+    expect(appSource).toContain('type: "requestRenameProjectMap"');
+    expect(appSource).not.toContain('window.prompt("Rename project map"');
+    expect(webviewPanelSource).toContain('type: "requestRenameProjectMap"');
+    expect(webviewPanelSource).toContain("showInputBox");
+    expect(webviewPanelSource).toContain("renameMap");
   });
 });

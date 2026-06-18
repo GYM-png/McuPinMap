@@ -43,14 +43,11 @@ export const App = (): JSX.Element => {
         type="button"
         className="secondary-action"
         onClick={() => {
-          const name = window.prompt("Rename project map", activeProjectMap.name);
-          if (name?.trim()) {
-            vscode.postMessage({
-              type: "renameProjectMap",
-              mapId: activeProjectMap.id,
-              name: name.trim()
-            });
-          }
+          vscode.postMessage({
+            type: "requestRenameProjectMap",
+            mapId: activeProjectMap.id,
+            mapName: activeProjectMap.name
+          });
         }}
       >
         Rename

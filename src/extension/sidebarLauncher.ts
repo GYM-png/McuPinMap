@@ -58,13 +58,18 @@ const renderEmptyPinMaps = (message = "No local pin maps yet."): string =>
 const renderMapRow = (map: ProjectPinMapSummary, isActive: boolean): string => {
   const chipId = map.chipId ?? "No chip selected";
 
-  return `<button type="button" class="launcher-row map-row${isActive ? " active" : ""}" data-action="openProjectMap" data-map-id="${escapeHtml(map.id)}">
-          <span class="launcher-row-icon" aria-hidden="true">&#9635;</span>
-          <span class="launcher-row-main">
-            <span class="launcher-row-title">${escapeHtml(map.name)}</span>
-            <span class="launcher-row-meta">${escapeHtml(chipId)} &middot; updated ${escapeHtml(map.updatedAt)}</span>
-          </span>
-        </button>`;
+  return `<div class="map-row-wrapper${isActive ? " active" : ""}">
+          <button type="button" class="launcher-row map-row" data-action="openProjectMap" data-map-id="${escapeHtml(map.id)}">
+            <span class="launcher-row-icon" aria-hidden="true">&#9635;</span>
+            <span class="launcher-row-main">
+              <span class="launcher-row-title">${escapeHtml(map.name)}</span>
+              <span class="launcher-row-meta">${escapeHtml(chipId)} &middot; updated ${escapeHtml(map.updatedAt)}</span>
+            </span>
+          </button>
+          <button type="button" class="launcher-icon-action" data-action="requestRenameProjectMap" data-map-id="${escapeHtml(map.id)}" data-map-name="${escapeHtml(map.name)}" aria-label="Rename ${escapeHtml(map.name)}" title="Rename">
+            <span aria-hidden="true">...</span>
+          </button>
+        </div>`;
 };
 
 const renderPinMapsSection = (state: PinMapLauncherState): string => {
@@ -187,11 +192,12 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
       }
 
       .launcher-row:hover,
-      .launcher-row.active {
+      .map-row-wrapper:hover,
+      .map-row-wrapper.active {
         background: var(--vscode-list-hoverBackground);
       }
 
-      .launcher-row.active {
+      .map-row-wrapper.active {
         color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
         background: var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground));
       }
@@ -245,6 +251,30 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
         gap: 1px;
       }
 
+      .map-row-wrapper {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 28px;
+        align-items: stretch;
+      }
+
+      .map-row-wrapper .launcher-row:hover {
+        background: transparent;
+      }
+
+      .launcher-icon-action {
+        border: 0;
+        padding: 0;
+        color: var(--vscode-descriptionForeground);
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .launcher-icon-action:hover {
+        color: var(--vscode-foreground);
+        background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+      }
+
       .error {
         color: var(--vscode-errorForeground);
       }
@@ -265,7 +295,8 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
 
         vscode.postMessage({
           type: button.dataset.action,
-          mapId: button.dataset.mapId
+          mapId: button.dataset.mapId,
+          mapName: button.dataset.mapName
         });
       });
     </script>

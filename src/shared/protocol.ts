@@ -35,6 +35,7 @@ export type WebviewToExtensionMessage =
   | { type: "selectProjectMap"; mapId: string }
   | { type: "createProjectMap"; name: string }
   | { type: "duplicateProjectMap"; sourceMapId?: string; name: string }
+  | { type: "requestRenameProjectMap"; mapId: string; mapName?: string }
   | { type: "renameProjectMap"; mapId: string; name: string }
   | { type: "saveProjectMap"; map: ProjectPinMapDocument }
   | { type: "assignFunction"; assignment: Assignment }

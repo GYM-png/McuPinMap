@@ -25,8 +25,8 @@ describe("renderPinMapLauncherHtml", () => {
     expect(html).toContain("Create Default Map");
     expect(html).toContain("data-action=\"createDefaultMap\"");
     expect(html).toContain("No local pin maps yet.");
-    expect(html).not.toContain("map-row");
     expect(html).not.toContain("openProjectMap");
+    expect(html).not.toContain("data-action=\"requestRenameProjectMap\"");
     expect(html).not.toContain("New Map");
     expect(html).not.toContain("data-action=\"newProjectMap\"");
   });
@@ -63,7 +63,9 @@ describe("renderPinMapLauncherHtml", () => {
     expect(html).toContain("2026-06-18T10:20:30.000Z");
     expect(html).toContain("openProjectMap");
     expect(html).toContain("data-map-id=\"main-map\"");
-    expect(html).toContain("map-row active");
+    expect(html).toContain("data-action=\"requestRenameProjectMap\"");
+    expect(html).toContain("aria-label=\"Rename Main Board\"");
+    expect(html).toContain("map-row-wrapper active");
     expect(html).not.toContain("New Map");
     expect(html).not.toContain("data-action=\"newProjectMap\"");
   });
@@ -91,11 +93,33 @@ describe("renderPinMapLauncherHtml", () => {
     expect(mapHtml).toContain("&lt;bad&gt;");
     expect(mapHtml).toContain("2026-06-18T10:20:30.000Z&lt;script&gt;");
     expect(mapHtml).toContain("bad-map&quot; onclick=&quot;alert(1)");
+    expect(mapHtml).toContain("Rename &lt;script&gt;");
     expect(mapHtml).not.toContain("<script>");
     expect(mapHtml).not.toContain("onclick=\"alert(1)\"");
     expect(errorHtml).toContain("ACTIONS");
     expect(errorHtml).toContain("PIN MAPS");
     expect(errorHtml).toContain("Failed &lt;bad&gt;");
     expect(errorHtml).not.toContain("Failed <bad>");
+  });
+
+  it("posts rename requests with map id and current name", () => {
+    const html = renderPinMapLauncherHtml("abc123", {
+      kind: "ready",
+      activeMapId: "main-map",
+      maps: [
+        {
+          id: "main-map",
+          name: "Main Board",
+          chipId: "gd32f407",
+          assignmentCount: 3,
+          updatedAt: "2026-06-18T10:20:30.000Z"
+        }
+      ]
+    });
+
+    expect(html).not.toContain("window.prompt");
+    expect(html).toContain("type: button.dataset.action");
+    expect(html).toContain("mapName: button.dataset.mapName");
+    expect(html).toContain("data-map-name=\"Main Board\"");
   });
 });

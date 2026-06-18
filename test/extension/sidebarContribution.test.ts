@@ -6,6 +6,7 @@ const packageJson = JSON.parse(readFileSync(join(process.cwd(), "package.json"),
 
 describe("VS Code sidebar contribution", () => {
   test("contributes an activity bar container for McuPinMap", () => {
+    expect(packageJson.activationEvents).toContain("onStartupFinished");
     expect(packageJson.activationEvents).toContain("onView:mcupinmap.pinMapView");
     expect(packageJson.contributes.viewsContainers.activitybar).toContainEqual({
       id: "mcupinmap",

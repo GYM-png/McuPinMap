@@ -1,86 +1,111 @@
 # McuPinMap
 
-McuPinMap is a VS Code extension for browsing MCU GPIO alternate functions and planning pin assignments.
+[中文文档](README.zh-CN.md)
+
+McuPinMap is a lightweight VS Code extension for exploring MCU GPIO alternate
+functions and planning pin assignments. It focuses on the logical Pin Map first:
+choose a chip, inspect what each IO can do, search for peripheral signals, assign
+functions, and export the result for firmware or hardware notes.
+
+## Screenshot
+
+<p align="center">
+  <img src="docs/pictures/example.gif" alt="McuPinMap Pin Map workspace" width="70%" />
+</p>
 
 ## Features
 
-- Lightweight extension package without bundled chip CSV data.
-- Search GitHub-hosted chip data and download only the selected chip.
-- Import local chip CSV files when working with private or experimental data.
-- Logical Pin Map grouped by GPIO port.
+- Browse GPIO alternate functions by chip.
 - Search by pin name, alternate function, peripheral, or signal.
+- View pins grouped by GPIO port in a logical Pin Map.
+- Inspect package pinout data for LQFP and BGA packages.
 - Assign alternate functions to pins.
-- Detect pin overlap and duplicate peripheral-signal conflicts.
+- Detect duplicate pin usage and duplicate peripheral-signal assignments.
 - Export assignments as JSON or Markdown.
+- Download curated chip data on demand instead of bundling CSV data in the VSIX.
+- Import local CSV data for private, experimental, or vendor-specific chips.
 
-## Data Layout
+## Usage
 
-Published chip data is maintained in the separate GitHub data repository:
+Open the Pin Map workspace from VS Code:
+
+1. Install or run the McuPinMap extension.
+2. Open the command palette with `Ctrl+Shift+P`.
+3. Run `McuPinMap: Open Pin Map`.
+
+You can also open the McuPinMap activity bar view and use the Pin Map entry
+there. In development, choose `Run Extension and Open Pin Map` from the VS Code
+Run and Debug panel to start an Extension Development Host and open the Pin Map
+automatically.
+
+Once the workspace is open:
+
+1. Select or download a chip from the chip library.
+2. Search for a pin, peripheral, signal, or alternate function.
+3. Review supported functions in the Pin Detail panel.
+4. Assign functions to pins and resolve any reported conflicts.
+5. Export the assignment plan as JSON or Markdown.
+
+## Data Model
+
+The extension package is intentionally small. Curated chip source data is kept in
+the external data repository:
 
 ```text
 https://github.com/GYM-png/mcupinfunc-data
 ```
 
-The extension reads the remote index from:
+By default, McuPinMap reads the remote chip index from:
 
 ```text
 https://raw.githubusercontent.com/GYM-png/mcupinfunc-data/main/index.json
 ```
 
-Each chip in the data repository lives under:
+The URL can be changed with the VS Code setting:
 
 ```text
-chips/<vendor>/<family>/<part-number>/
+mcupinmap.remoteIndexUrl
 ```
 
-Runtime data:
+Chip source data is organized as:
 
 ```text
-chip.json
+chips/<vendor>/<family>/<part-number>/source/
 ```
 
-Source CSV data:
+Runtime chip data is generated as `chip.json` next to the source directory in
+the data repository. Downloaded chips are cached in VS Code global storage for
+the extension.
 
-```text
-source/<PART_NUMBER>_GPIO_AF.csv
-source/<PART_NUMBER>_<PACKAGE>_PINOUT.csv
-```
+The main repository may keep legacy development fixtures under `data/chips/`,
+but release VSIX packages exclude `data/**`, `generated/**`, and
+`external-data/**`.
 
-GPIO alternate-function files use:
+## CSV Formats
 
-```text
-<PART_NUMBER>_GPIO_AF.csv
-```
-
-LQFP pinout files use:
-
-```text
-<PART_NUMBER>_<PACKAGE>_PINOUT.csv
-```
-
-Examples:
-
-```text
-chips/gigadevice/gd32f4/gd32f407/source/GD32F407_GPIO_AF.csv
-```
-
-The main repository may keep legacy development fixtures under `data/chips/`, but release VSIX packages exclude `data/**`, `generated/**`, and `external-data/**`.
-
-## CSV Format
-
-GPIO AF CSV files must use this header:
+GPIO alternate-function CSV files use a fixed `AF0` to `AF15` table:
 
 ```csv
 PinName,AF0,AF1,AF2,AF3,AF4,AF5,AF6,AF7,AF8,AF9,AF10,AF11,AF12,AF13,AF14,AF15
 ```
 
-When package pinout files are added, LQFP pinout CSV files use this header:
+LQFP pinout CSV files use:
 
 ```csv
 PadNumber,PinName,PinType
 ```
 
-`PadNumber` must cover every pad in the package, for example `1..144` for `LQFP144`. `PinType` is required and must be one of `gpio`, `power`, `ground`, `reset`, `clock`, `boot`, or `nc`.
+BGA pinout CSV files use:
+
+```csv
+BallName,PinName,PinType
+```
+
+`PinType` must be one of:
+
+```text
+gpio, power, ground, reset, clock, boot, nc
+```
 
 ## Development
 
@@ -96,7 +121,7 @@ Run tests:
 npm test
 ```
 
-Build the data pack, extension host, and Webview:
+Build the legacy fixture data, extension host, and Webview:
 
 ```powershell
 npm run build
@@ -114,47 +139,63 @@ Validate legacy fixture chip data:
 npm run validate:data
 ```
 
+Package a lightweight VSIX without bundled chip data:
+
+```powershell
+npm run package:light
+```
+
+## External Data Workflow
+
+Use a local checkout of the data repository at:
+
+```text
+external-data/mcupinfunc-data/
+```
+
 Validate the external data checkout:
 
 ```powershell
 npm run validate:remote-data
 ```
 
-Build the external data repository's per-chip `chip.json` files and root `index.json`:
+Build per-chip `chip.json` files and the root `index.json`:
 
 ```powershell
 npm run build:remote-data
 ```
 
-Package a lightweight VSIX that excludes chip data:
+Verify release data when the data repository tooling is available:
 
 ```powershell
-npm run package:light
+npm run verify:remote-data
 ```
 
-## Build Pipeline
-
-`npm run build` performs these steps:
-
-- Validate `data/chips/manifest.json` and referenced CSV files.
-- Generate runtime chip JSON under `generated/chips/`.
-- Compile the VS Code extension host.
-- Bundle the React Webview.
-
-Generated files are intentionally ignored by Git.
-
-## Publishing Chip Data
-
-The local checkout of the data repository is ignored by the main repository:
+## Project Layout
 
 ```text
-external-data/mcupinfunc-data/
+src/extension/    VS Code extension host integration
+src/shared/       Shared validation, parsing, indexing, search, and assignment logic
+src/webview/      React and Zustand Webview UI
+scripts/          Data validation and build scripts
+test/             Vitest test suites
+resources/        Extension icons and static assets
 ```
 
-To publish data updates:
+Do not commit local build output, dependency folders, generated chip data, or
+the external data checkout.
 
-1. Add or update CSV files under `external-data/mcupinfunc-data/chips/<vendor>/<family>/<part>/source/`.
-2. Run `npm run validate:remote-data`.
-3. Run `npm run build:remote-data`.
-4. Commit and push from `external-data/mcupinfunc-data`.
-5. Verify `https://raw.githubusercontent.com/GYM-png/mcupinfunc-data/main/index.json` lists the new chip.
+## Debugging in VS Code
+
+Use the launch configurations under `.vscode/`:
+
+- `Run Extension`
+- `Run Extension and Open Pin Map`
+
+The second configuration starts the Extension Development Host and attempts to
+open the Pin Map view automatically. If it does not open, run
+`McuPinMap: Open Pin Map` from the command palette.
+
+## License
+
+MIT

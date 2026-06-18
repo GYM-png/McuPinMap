@@ -6,6 +6,7 @@ data/**
 generated/**
 external-data/**
 docs/**
+!docs/pictures/example.gif
 scripts/**
 src/**
 test/**
@@ -15,3 +16,4 @@ vite.config.ts
 vitest.config.ts
 *.vsix
 node_modules/**
+!node_modules/csv-parse/**

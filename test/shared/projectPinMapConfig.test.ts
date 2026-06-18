@@ -58,6 +58,24 @@ describe("projectPinMapConfig", () => {
     expect(parseProjectPinMapIndex(index)).toEqual(index);
   });
 
+  it("normalizes valid assignment rows when parsing project pin map documents", () => {
+    expect(
+      parseProjectPinMapDocument({
+        schemaVersion: 1,
+        id: "motor-control",
+        name: "Motor Control",
+        mapView: "logical",
+        assignments: [
+          {
+            ...assignment,
+            ignored: "field"
+          }
+        ],
+        updatedAt: now
+      }).assignments
+    ).toEqual([assignment]);
+  });
+
   it("rejects invalid index schema versions with a useful error", () => {
     expect(() =>
       parseProjectPinMapIndex({
@@ -65,6 +83,43 @@ describe("projectPinMapConfig", () => {
         maps: []
       })
     ).toThrow("Project pin map index schemaVersion must be 1.");
+  });
+
+  it("rejects duplicate project pin map ids in indexes", () => {
+    expect(() =>
+      parseProjectPinMapIndex({
+        schemaVersion: 1,
+        activeMapId: "default",
+        maps: [
+          {
+            id: "default",
+            name: "Default",
+            updatedAt: now
+          },
+          {
+            id: "default",
+            name: "Default Copy",
+            updatedAt: now
+          }
+        ]
+      })
+    ).toThrow("Project pin map index contains duplicate map id default.");
+  });
+
+  it("rejects active project pin map ids that are not in indexes", () => {
+    expect(() =>
+      parseProjectPinMapIndex({
+        schemaVersion: 1,
+        activeMapId: "missing",
+        maps: [
+          {
+            id: "default",
+            name: "Default",
+            updatedAt: now
+          }
+        ]
+      })
+    ).toThrow("Project pin map index activeMapId must reference an existing map.");
   });
 
   it("rejects invalid document map views with a useful error", () => {
@@ -78,6 +133,24 @@ describe("projectPinMapConfig", () => {
         updatedAt: now
       })
     ).toThrow("Project pin map document mapView must be logical or package.");
+  });
+
+  it("rejects malformed assignment rows when parsing project pin map documents", () => {
+    expect(() =>
+      parseProjectPinMapDocument({
+        schemaVersion: 1,
+        id: "motor-control",
+        name: "Motor Control",
+        mapView: "package",
+        assignments: [
+          {
+            ...assignment,
+            id: " "
+          }
+        ],
+        updatedAt: now
+      })
+    ).toThrow("Project pin map assignment id must be a non-empty string.");
   });
 
   it("creates stable unique ids from names", () => {

@@ -131,9 +131,28 @@ export const parseProjectPinMapIndex = (value: unknown): ProjectPinMapIndex => {
     throw new Error("Project pin map index maps must be an array.");
   }
 
-  record.maps.forEach((map, index) => validateSummary(map, `Project pin map index maps[${index}]`));
+  const mapIds = new Set<string>();
+  const maps = record.maps.map((map, index) =>
+    readSummary(map, `Project pin map index maps[${index}]`)
+  );
 
-  return value as ProjectPinMapIndex;
+  maps.forEach((map) => {
+    if (mapIds.has(map.id)) {
+      throw new Error(`Project pin map index contains duplicate map id ${map.id}.`);
+    }
+
+    mapIds.add(map.id);
+  });
+
+  if (record.activeMapId !== undefined && !mapIds.has(record.activeMapId)) {
+    throw new Error("Project pin map index activeMapId must reference an existing map.");
+  }
+
+  return {
+    schemaVersion: 1,
+    ...(record.activeMapId === undefined ? {} : { activeMapId: record.activeMapId }),
+    maps
+  };
 };
 
 export const parseProjectPinMapDocument = (value: unknown): ProjectPinMapDocument => {
@@ -143,9 +162,12 @@ export const parseProjectPinMapDocument = (value: unknown): ProjectPinMapDocumen
     throw new Error("Project pin map document schemaVersion must be 1.");
   }
 
-  expectNonEmptyString(record.id, "Project pin map document id must be a non-empty string.");
-  expectNonEmptyString(record.name, "Project pin map document name must be a non-empty string.");
-  expectNonEmptyString(
+  const id = readNonEmptyString(record.id, "Project pin map document id must be a non-empty string.");
+  const name = readNonEmptyString(
+    record.name,
+    "Project pin map document name must be a non-empty string."
+  );
+  const updatedAt = readNonEmptyString(
     record.updatedAt,
     "Project pin map document updatedAt must be a non-empty string."
   );
@@ -169,19 +191,71 @@ export const parseProjectPinMapDocument = (value: unknown): ProjectPinMapDocumen
     throw new Error("Project pin map document assignments must be an array.");
   }
 
-  return value as ProjectPinMapDocument;
+  const assignments = record.assignments.map(readAssignment);
+
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    ...(record.chipId === undefined ? {} : { chipId: record.chipId }),
+    ...(record.selectedPackageName === undefined
+      ? {}
+      : { selectedPackageName: record.selectedPackageName }),
+    mapView: record.mapView,
+    assignments,
+    updatedAt
+  };
 };
 
-const validateSummary = (value: unknown, label: string): void => {
+const readSummary = (value: unknown, label: string): ProjectPinMapSummary => {
   const record = expectRecord(value, `${label} must be an object.`);
 
-  expectNonEmptyString(record.id, `${label}.id must be a non-empty string.`);
-  expectNonEmptyString(record.name, `${label}.name must be a non-empty string.`);
-  expectNonEmptyString(record.updatedAt, `${label}.updatedAt must be a non-empty string.`);
+  const id = readNonEmptyString(record.id, `${label}.id must be a non-empty string.`);
+  const name = readNonEmptyString(record.name, `${label}.name must be a non-empty string.`);
+  const updatedAt = readNonEmptyString(
+    record.updatedAt,
+    `${label}.updatedAt must be a non-empty string.`
+  );
 
   if (record.chipId !== undefined && !isNonEmptyString(record.chipId)) {
     throw new Error(`${label}.chipId must be a non-empty string.`);
   }
+
+  return {
+    id,
+    name,
+    ...(record.chipId === undefined ? {} : { chipId: record.chipId }),
+    updatedAt
+  };
+};
+
+const readAssignment = (value: unknown): Assignment => {
+  const record = expectRecord(value, "Project pin map assignment must be an object.");
+
+  return {
+    id: readNonEmptyString(record.id, "Project pin map assignment id must be a non-empty string."),
+    chipId: readNonEmptyString(
+      record.chipId,
+      "Project pin map assignment chipId must be a non-empty string."
+    ),
+    pinName: readNonEmptyString(
+      record.pinName,
+      "Project pin map assignment pinName must be a non-empty string."
+    ),
+    functionRaw: readNonEmptyString(
+      record.functionRaw,
+      "Project pin map assignment functionRaw must be a non-empty string."
+    ),
+    af: readNonEmptyString(record.af, "Project pin map assignment af must be a non-empty string."),
+    peripheral: readNonEmptyString(
+      record.peripheral,
+      "Project pin map assignment peripheral must be a non-empty string."
+    ),
+    signal: readNonEmptyString(
+      record.signal,
+      "Project pin map assignment signal must be a non-empty string."
+    )
+  };
 };
 
 const expectRecord = (value: unknown, message: string): Record<string, unknown> => {
@@ -192,10 +266,12 @@ const expectRecord = (value: unknown, message: string): Record<string, unknown> 
   return value as Record<string, unknown>;
 };
 
-const expectNonEmptyString = (value: unknown, message: string): void => {
+const readNonEmptyString = (value: unknown, message: string): string => {
   if (!isNonEmptyString(value)) {
     throw new Error(message);
   }
+
+  return value;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>

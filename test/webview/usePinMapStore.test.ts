@@ -214,6 +214,43 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().chip).toBeUndefined();
   });
 
+  it("preserves selected package when the active project map refreshes for the same chip", () => {
+    const store = usePinMapStore.getState();
+
+    store.setProjectMap({
+      ...createProjectMap("default", "Default"),
+      chipId: "gd32f407"
+    });
+    store.setChips(
+      [{ id: "gd32f407", displayName: "GD32F407", vendor: "GigaDevice", family: "GD32F4" }],
+      "gd32f407"
+    );
+    store.setChip(createChip([lqfp100, lqfp144]));
+    store.setMapView("package");
+    store.setSelectedPackageName("LQFP144");
+
+    store.setProjectMap({
+      ...createProjectMap("default", "Default"),
+      chipId: "gd32f407",
+      updatedAt: "2026-06-18T00:01:00.000Z"
+    });
+
+    expect(usePinMapStore.getState().mapView).toBe("package");
+    expect(usePinMapStore.getState().selectedPackageName).toBe("LQFP144");
+  });
+
+  it("selects the first package when package view state omits a package name", () => {
+    const store = usePinMapStore.getState();
+
+    store.setChip(createChip([lqfp100, lqfp144]));
+    store.setSelectedPackageName("LQFP144");
+
+    store.setProjectMapViewState("package", undefined);
+
+    expect(usePinMapStore.getState().mapView).toBe("package");
+    expect(usePinMapStore.getState().selectedPackageName).toBe("LQFP100");
+  });
+
   it("creates a project map document from the current workspace state", () => {
     const store = usePinMapStore.getState();
 

@@ -57,6 +57,14 @@ type PinMapState = {
 const searchChip = (chip: Chip | undefined, query: string): SearchResult[] =>
   chip ? createSearchIndex(chip).search(query) : [];
 
+const resolvePackageName = (
+  chip: Chip | undefined,
+  packageName: string | undefined
+): string | undefined =>
+  chip?.packages.some((layout) => layout.packageName === packageName)
+    ? packageName
+    : chip?.packages[0]?.packageName;
+
 const clearWorkspaceForProjectMap = (
   state: PinMapState,
   map: ProjectPinMapSummary | undefined
@@ -174,7 +182,10 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
   setProjectMapViewState: (mapView, selectedPackageName) =>
     set((state) => ({
       mapView: mapView ?? state.mapView,
-      selectedPackageName
+      selectedPackageName:
+        (mapView ?? state.mapView) === "package"
+          ? resolvePackageName(state.chip, selectedPackageName)
+          : selectedPackageName
     })),
   setProjectMapSaveStatus: (projectMapSaveStatus) => set({ projectMapSaveStatus }),
   createProjectMapDocument: () => {
@@ -214,7 +225,9 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
   setAssignments: (assignments, conflicts) => set({ assignments, conflicts }),
   setMapView: (mapView) =>
     set((state) => ({
-      mapView: mapView === "package" && (state.chip?.packages.length ?? 0) === 0 ? "logical" : mapView
+      mapView: mapView === "package" && (state.chip?.packages.length ?? 0) === 0 ? "logical" : mapView,
+      selectedPackageName:
+        mapView === "package" ? resolvePackageName(state.chip, state.selectedPackageName) : state.selectedPackageName
     })),
   setSelectedPackageName: (selectedPackageName) => set({ selectedPackageName }),
   selectPin: (pinName) => set({ selectedPinName: pinName }),

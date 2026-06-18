@@ -167,7 +167,10 @@ export class ProjectPinMapStore {
     return { kind: "ready", index, activeMap: savedMap };
   }
 
-  async duplicateMap(sourceMapId: string, name: string): Promise<ProjectPinMapStoreResult> {
+  async duplicateMap(
+    sourceMapId: string | undefined,
+    name: string
+  ): Promise<ProjectPinMapStoreResult> {
     const root = this.workspaceRoot();
     if (!root) {
       return { kind: "no-workspace" };
@@ -179,7 +182,7 @@ export class ProjectPinMapStore {
     }
 
     const source =
-      indexResult.kind === "ready" && indexResult.index.maps.length > 0
+      sourceMapId && indexResult.kind === "ready" && indexResult.index.maps.length > 0
         ? await this.readMap(root, sourceMapId)
         : undefined;
     if (source?.kind === "error") {

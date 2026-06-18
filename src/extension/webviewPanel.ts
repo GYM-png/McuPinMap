@@ -136,10 +136,7 @@ export class PinMapViewProvider implements vscode.WebviewViewProvider {
             }
 
             case "newProjectMap": {
-              const result = await this.projectPinMapStore.duplicateMap(
-                undefined as unknown as string,
-                "New Map"
-              );
+              const result = await this.projectPinMapStore.duplicateMap(undefined, "New Map");
               if (result.kind === "ready" && result.activeMap) {
                 openPinMapPanel(this.context, this.chipRepository, this.projectPinMapStore, {
                   mapId: result.activeMap.id

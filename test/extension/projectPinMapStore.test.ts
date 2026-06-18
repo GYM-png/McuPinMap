@@ -253,6 +253,52 @@ describe("ProjectPinMapStore", () => {
     expect(existsSync(join(root, ".pinmap/maps/new-map.json"))).toBe(true);
   });
 
+  it("creates an empty New Map from an undefined source when maps already exist", async () => {
+    const root = createRoot();
+    const store = createStore(root, [firstNow, secondNow]);
+
+    await store.saveMap({
+      schemaVersion: 1,
+      id: "configured",
+      name: "Configured",
+      chipId: "gd32f407",
+      mapView: "logical",
+      assignments: [
+        {
+          id: "gd32f407:PA15:SPI0_NSS",
+          chipId: "gd32f407",
+          pinName: "PA15",
+          functionRaw: "SPI0_NSS",
+          af: "AF5",
+          peripheral: "SPI0",
+          signal: "NSS"
+        }
+      ],
+      updatedAt: firstNow
+    });
+
+    const result = await store.duplicateMap(undefined, "New Map");
+
+    expect(result).toMatchObject({
+      kind: "ready",
+      index: {
+        activeMapId: "new-map",
+        maps: [
+          { id: "configured", name: "Configured", chipId: "gd32f407" },
+          { id: "new-map", name: "New Map", updatedAt: secondNow }
+        ]
+      },
+      activeMap: {
+        id: "new-map",
+        name: "New Map",
+        mapView: "package",
+        assignments: [],
+        updatedAt: secondNow
+      }
+    });
+    expect(result.kind === "ready" ? result.activeMap?.chipId : undefined).toBeUndefined();
+  });
+
   it("rejects path traversal map ids without writing outside maps", async () => {
     const root = createRoot();
     const store = createStore(root);

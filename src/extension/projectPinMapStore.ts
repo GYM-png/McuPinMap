@@ -2,7 +2,6 @@ import { constants, renameSync, unlinkSync } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import {
-  createDefaultProjectPinMap,
   createNextProjectPinMapId,
   createProjectPinMapDocument,
   parseProjectPinMapDocument,
@@ -89,12 +88,22 @@ export class ProjectPinMapStore {
       return indexResult;
     }
 
-    const { index, map } = createDefaultProjectPinMap(this.now());
-    const mapResult = await this.readOptionalMap(root, map.id);
+    const existingIndex =
+      indexResult.kind === "ready" ? indexResult.index : { schemaVersion: 1 as const, maps: [] };
+    const existingIds = new Set(existingIndex.maps.map((map) => map.id));
+    let id = createNextProjectPinMapId("Default", existingIds);
+    let mapResult = await this.readOptionalMap(root, id);
+    while (mapResult.kind === "ready") {
+      existingIds.add(id);
+      id = createNextProjectPinMapId("Default", existingIds);
+      mapResult = await this.readOptionalMap(root, id);
+    }
     if (mapResult.kind === "error") {
       return mapResult;
     }
 
+    const map = createProjectPinMapDocument(id, "Default", this.now());
+    const index = this.upsertMapSummary(existingIndex, map);
     await this.writeMapAndIndex(root, index, map);
 
     return { kind: "ready", index, activeMap: map };

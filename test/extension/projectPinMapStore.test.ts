@@ -94,6 +94,53 @@ describe("ProjectPinMapStore", () => {
     );
   });
 
+  it("creates another default map without overwriting existing maps", async () => {
+    const root = createRoot();
+    const store = createStore(root, [firstNow, secondNow]);
+
+    await store.createDefaultMap();
+    const existingMap = readJson(root, ".pinmap/maps/default.json") as ProjectPinMapDocument;
+    writeJson(root, ".pinmap/maps/default.json", {
+      ...existingMap,
+      chipId: "gd32f407",
+      assignments: [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ]
+    });
+
+    const result = await store.createDefaultMap();
+
+    expect(result).toMatchObject({
+      kind: "ready",
+      index: {
+        activeMapId: "default-2",
+        maps: [
+          { id: "default", name: "Default", updatedAt: firstNow },
+          { id: "default-2", name: "Default", updatedAt: secondNow }
+        ]
+      },
+      activeMap: { id: "default-2", name: "Default", updatedAt: secondNow }
+    });
+    expect(readJson(root, ".pinmap/maps/default.json")).toMatchObject({
+      id: "default",
+      chipId: "gd32f407",
+      assignments: [{ id: "gd32f407:PA0:USART1_CTS" }]
+    });
+    expect(readJson(root, ".pinmap/maps/default-2.json")).toMatchObject({
+      id: "default-2",
+      name: "Default",
+      assignments: []
+    });
+  });
+
   it("lists and loads maps from disk", async () => {
     const root = createRoot();
     const store = createStore(root);

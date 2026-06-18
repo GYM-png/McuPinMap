@@ -10,7 +10,12 @@ export type ExtensionToWebviewMessage =
   | { type: "chipImportCancelled" }
   | { type: "chipImportCompleted"; chip: ChipSummary }
   | { type: "projectMapsLoaded"; maps: ProjectPinMapSummary[]; activeMapId?: string }
-  | { type: "projectMapLoaded"; map: ProjectPinMapSummary }
+  | {
+      type: "projectMapLoaded";
+      map: ProjectPinMapSummary;
+      mapView?: "logical" | "package";
+      selectedPackageName?: string;
+    }
   | { type: "projectMapSaveStarted" }
   | { type: "projectMapSaved"; map: ProjectPinMapSummary }
   | { type: "projectMapSaveFailed"; message: string }

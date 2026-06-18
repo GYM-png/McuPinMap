@@ -19,6 +19,7 @@ type ShellProps = PropsWithChildren<{
   sidebar: JSX.Element;
   detail: JSX.Element;
   error?: string;
+  projectMapHeader?: JSX.Element;
 }>;
 
 type WorkspaceDragState = {
@@ -34,7 +35,13 @@ const workspaceGridStyle = (
   "--workspace-detail-width": `${layout.detailWidth}px`
 });
 
-export const Shell = ({ sidebar, detail, error, children }: ShellProps): JSX.Element => {
+export const Shell = ({
+  sidebar,
+  detail,
+  error,
+  projectMapHeader,
+  children
+}: ShellProps): JSX.Element => {
   const [layout, setLayout] = useState(() =>
     getWorkspaceLayoutFromState(
       vscode.getState(),
@@ -99,6 +106,7 @@ export const Shell = ({ sidebar, detail, error, children }: ShellProps): JSX.Ele
             Search alternate functions, assign signals, and catch pin conflicts before firmware
             setup.
           </p>
+          {projectMapHeader}
           <button
             type="button"
             className="secondary-action workspace-reset-button"

@@ -275,7 +275,12 @@ const initializePinMapWebview = (
     activeProjectMap = map;
     selectedChipId = map.chipId;
     assignments = map.assignments;
-    postMessage({ type: "projectMapLoaded", map: summarizeProjectPinMap(map) });
+    postMessage({
+      type: "projectMapLoaded",
+      map: summarizeProjectPinMap(map),
+      mapView: map.mapView,
+      selectedPackageName: map.selectedPackageName
+    });
   };
 
   const postChipLoaded = (): void => {

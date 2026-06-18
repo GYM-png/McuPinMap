@@ -109,6 +109,23 @@ small {
   justify-content: center;
 }
 
+.project-map-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.project-map-header span {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.project-map-header small {
+  color: var(--muted);
+}
+
 .workspace-grid {
   --workspace-sidebar-width: 280px;
   --workspace-detail-width: 360px;

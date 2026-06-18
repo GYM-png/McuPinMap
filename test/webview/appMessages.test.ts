@@ -201,6 +201,46 @@ describe("handleExtensionMessage", () => {
     expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
   });
 
+  it("restores saved project pin map view state", () => {
+    handleExtensionMessage(
+      {
+        type: "projectMapLoaded",
+        map: {
+          id: "default",
+          name: "Default",
+          updatedAt: "2026-06-18T00:00:00.000Z"
+        },
+        mapView: "logical",
+        selectedPackageName: "LQFP144"
+      },
+      () => undefined,
+      () => undefined
+    );
+
+    expect(usePinMapStore.getState().mapView).toBe("logical");
+    expect(usePinMapStore.getState().selectedPackageName).toBe("LQFP144");
+  });
+
+  it("clears stale package selection when a project map has none", () => {
+    usePinMapStore.getState().setSelectedPackageName("LQFP144");
+
+    handleExtensionMessage(
+      {
+        type: "projectMapLoaded",
+        map: {
+          id: "default",
+          name: "Default",
+          updatedAt: "2026-06-18T00:00:00.000Z"
+        },
+        mapView: "logical"
+      },
+      () => undefined,
+      () => undefined
+    );
+
+    expect(usePinMapStore.getState().selectedPackageName).toBeUndefined();
+  });
+
   it("tracks project pin map save start and failure messages", () => {
     let error = "";
 

@@ -32,6 +32,7 @@ export const handleExtensionMessage = (
 
     case "projectMapLoaded":
       store.setProjectMap(message.map);
+      store.setProjectMapViewState(message.mapView, message.selectedPackageName);
       store.setProjectMapSaveStatus("saved");
       clearError();
       break;

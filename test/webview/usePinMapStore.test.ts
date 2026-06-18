@@ -160,4 +160,55 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().activeProjectMap).toEqual(renamedMap);
     expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
   });
+
+  it("creates a project map document from the current workspace state", () => {
+    const store = usePinMapStore.getState();
+
+    store.setProjectMap({
+      id: "default",
+      name: "Default",
+      chipId: "gd32f407",
+      updatedAt: "2026-06-18T12:00:00.000Z"
+    });
+    store.setChips(
+      [{ id: "gd32f407", displayName: "GD32F407", vendor: "GigaDevice", family: "GD32F4" }],
+      "gd32f407"
+    );
+    store.setChip(createChip([lqfp100]));
+    store.setAssignments(
+      [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ],
+      []
+    );
+
+    expect(store.createProjectMapDocument()).toEqual({
+      schemaVersion: 1,
+      id: "default",
+      name: "Default",
+      chipId: "gd32f407",
+      selectedPackageName: "LQFP100",
+      mapView: "package",
+      assignments: [
+        {
+          id: "gd32f407:PA0:USART1_CTS",
+          chipId: "gd32f407",
+          pinName: "PA0",
+          functionRaw: "USART1_CTS",
+          af: "AF7",
+          peripheral: "USART1",
+          signal: "CTS"
+        }
+      ],
+      updatedAt: "2026-06-18T12:00:00.000Z"
+    });
+  });
 });

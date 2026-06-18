@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import type { RemoteChipSummary } from "../../shared/data/remoteChipIndex";
 import { createSearchIndex, type SearchResult } from "../../shared/data/searchIndex";
-import type { ProjectPinMapSummary } from "../../shared/projectPinMapConfig";
+import type {
+  ProjectPinMapDocument,
+  ProjectPinMapSummary
+} from "../../shared/projectPinMapConfig";
 import type { Assignment, Chip, ChipSummary, Conflict, Pin } from "../../shared/types";
 
 export type MapView = "logical" | "package";
@@ -31,7 +34,9 @@ type PinMapState = {
   setChip: (chip: Chip) => void;
   setProjectMaps: (maps: ProjectPinMapSummary[], activeMapId?: string) => void;
   setProjectMap: (map: ProjectPinMapSummary) => void;
+  setProjectMapViewState: (mapView?: MapView, selectedPackageName?: string) => void;
   setProjectMapSaveStatus: (status: ProjectMapSaveStatus) => void;
+  createProjectMapDocument: () => ProjectPinMapDocument | undefined;
   setRemoteQuery: (query: string) => void;
   setRemoteSearchLoading: () => void;
   setRemoteSearchResults: (query: string, chips: RemoteChipSummary[]) => void;
@@ -129,7 +134,29 @@ export const usePinMapStore = create<PinMapState>((set, get) => ({
 
       return { projectMaps, activeProjectMap };
     }),
+  setProjectMapViewState: (mapView, selectedPackageName) =>
+    set((state) => ({
+      mapView: mapView ?? state.mapView,
+      selectedPackageName
+    })),
   setProjectMapSaveStatus: (projectMapSaveStatus) => set({ projectMapSaveStatus }),
+  createProjectMapDocument: () => {
+    const state = get();
+    if (!state.activeProjectMap) {
+      return undefined;
+    }
+
+    return {
+      schemaVersion: 1,
+      id: state.activeProjectMap.id,
+      name: state.activeProjectMap.name,
+      chipId: state.selectedChipId,
+      selectedPackageName: state.selectedPackageName,
+      mapView: state.mapView,
+      assignments: state.assignments,
+      updatedAt: state.activeProjectMap.updatedAt
+    };
+  },
   setRemoteQuery: (remoteQuery) => set({ remoteQuery }),
   setRemoteSearchLoading: () => set({ remoteSearchStatus: "loading" }),
   setRemoteSearchResults: (query, remoteChips) =>

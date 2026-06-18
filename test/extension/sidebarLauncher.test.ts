@@ -25,6 +25,8 @@ describe("renderPinMapLauncherHtml", () => {
     expect(html).toContain("Create Default Map");
     expect(html).toContain("data-action=\"createDefaultMap\"");
     expect(html).toContain("No local pin maps yet.");
+    expect(html).not.toContain("map-row");
+    expect(html).not.toContain("openProjectMap");
     expect(html).not.toContain("New Map");
     expect(html).not.toContain("data-action=\"newProjectMap\"");
   });
@@ -76,7 +78,7 @@ describe("renderPinMapLauncherHtml", () => {
           name: "<script>",
           chipId: "<bad>",
           assignmentCount: 0,
-          updatedAt: "2026-06-18T10:20:30.000Z"
+          updatedAt: "2026-06-18T10:20:30.000Z<script>"
         }
       ]
     });
@@ -87,6 +89,7 @@ describe("renderPinMapLauncherHtml", () => {
 
     expect(mapHtml).toContain("&lt;script&gt;");
     expect(mapHtml).toContain("&lt;bad&gt;");
+    expect(mapHtml).toContain("2026-06-18T10:20:30.000Z&lt;script&gt;");
     expect(mapHtml).toContain("bad-map&quot; onclick=&quot;alert(1)");
     expect(mapHtml).not.toContain("<script>");
     expect(mapHtml).not.toContain("onclick=\"alert(1)\"");

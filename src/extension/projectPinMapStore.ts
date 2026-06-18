@@ -28,6 +28,11 @@ type ReadIndexResult =
   | { kind: "empty" }
   | { kind: "error"; message: string };
 
+type MapPathEntry = {
+  relativePath: string;
+  absolutePath: string;
+};
+
 const safeMapIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const windowsReservedBasenames = new Set([
   "con",
@@ -92,11 +97,11 @@ export class ProjectPinMapStore {
       indexResult.kind === "ready" ? indexResult.index : { schemaVersion: 1 as const, maps: [] };
     const existingIds = new Set(existingIndex.maps.map((map) => map.id));
     let id = createNextProjectPinMapId("Default", existingIds);
-    let mapResult = await this.readOptionalMap(root, id);
+    let mapResult = await this.readOptionalMap(root, indexResult, id);
     while (mapResult.kind === "ready") {
       existingIds.add(id);
       id = createNextProjectPinMapId("Default", existingIds);
-      mapResult = await this.readOptionalMap(root, id);
+      mapResult = await this.readOptionalMap(root, indexResult, id);
     }
     if (mapResult.kind === "error") {
       return mapResult;
@@ -133,7 +138,7 @@ export class ProjectPinMapStore {
       return { kind: "error", message: idError };
     }
 
-    const mapResult = await this.readMap(root, chosenMapId);
+    const mapResult = await this.readMap(root, indexResult.index, chosenMapId);
     if (mapResult.kind === "error") {
       return mapResult;
     }
@@ -161,7 +166,7 @@ export class ProjectPinMapStore {
       return { kind: "error", message: idError };
     }
 
-    const mapResult = await this.readMap(root, mapId);
+    const mapResult = await this.readMap(root, indexResult.index, mapId);
     if (mapResult.kind === "error") {
       return mapResult;
     }
@@ -196,7 +201,7 @@ export class ProjectPinMapStore {
       return { kind: "error", message: idError };
     }
 
-    const existingMap = await this.readOptionalMap(root, savedMap.id);
+    const existingMap = await this.readOptionalMap(root, indexResult, savedMap.id);
     if (existingMap.kind === "error") {
       return existingMap;
     }
@@ -226,7 +231,7 @@ export class ProjectPinMapStore {
 
     const source =
       sourceMapId && indexResult.kind === "ready" && indexResult.index.maps.length > 0
-        ? await this.readMap(root, sourceMapId)
+        ? await this.readMap(root, indexResult.index, sourceMapId)
         : undefined;
     if (source?.kind === "error") {
       return source;
@@ -291,20 +296,21 @@ export class ProjectPinMapStore {
 
   private async readMap(
     root: string,
+    index: ProjectPinMapIndex,
     mapId: string
   ): Promise<{ kind: "ready"; map: ProjectPinMapDocument } | { kind: "error"; message: string }> {
     const idError = this.validateMapId(mapId);
     if (idError) {
       return {
         kind: "error",
-        message: `Failed to read .pinmap/maps/${mapId}.json: ${idError}`
+        message: `Failed to read ${this.preferredMapRelativePath(index, mapId)}: ${idError}`
       };
     }
 
-    const relativePath = `.pinmap/maps/${mapId}.json`;
+    const mapPath = await this.resolveReadableMapPath(root, index, mapId);
 
     try {
-      const json = JSON.parse(await readFile(join(root, relativePath), "utf8"));
+      const json = JSON.parse(await readFile(mapPath.absolutePath, "utf8"));
       const map = parseProjectPinMapDocument(json);
       const mapIdError = this.validateMapId(map.id);
       if (mapIdError) {
@@ -318,13 +324,14 @@ export class ProjectPinMapStore {
     } catch (error) {
       return {
         kind: "error",
-        message: `Failed to read ${relativePath}: ${this.errorMessage(error)}`
+        message: `Failed to read ${mapPath.relativePath}: ${this.errorMessage(error)}`
       };
     }
   }
 
   private async readOptionalMap(
     root: string,
+    indexResult: ReadIndexResult,
     mapId: string
   ): Promise<
     | { kind: "ready"; map: ProjectPinMapDocument }
@@ -335,16 +342,18 @@ export class ProjectPinMapStore {
     if (idError) {
       return {
         kind: "error",
-        message: `Failed to read .pinmap/maps/${mapId}.json: ${idError}`
+        message: `Failed to read ${this.preferredMapRelativePathForResult(indexResult, mapId)}: ${idError}`
       };
     }
 
-    const absolutePath = this.mapPath(root, mapId);
-    if (!(await this.exists(absolutePath))) {
+    const index =
+      indexResult.kind === "ready" ? indexResult.index : { schemaVersion: 1 as const, maps: [] };
+    const mapPath = await this.resolveReadableMapPath(root, index, mapId);
+    if (!(await this.exists(mapPath.absolutePath))) {
       return { kind: "empty" };
     }
 
-    return this.readMap(root, mapId);
+    return this.readMap(root, index, mapId);
   }
 
   private upsertMapSummary(
@@ -376,7 +385,7 @@ export class ProjectPinMapStore {
     }
 
     await mkdir(this.mapsDir(root), { recursive: true });
-    await this.writeJsonAtomically(this.mapPath(root, map.id), map);
+    await this.writeJsonAtomically(this.mapPath(root, index, map.id), map);
     await this.writeJsonAtomically(this.indexPath(root), index);
   }
 
@@ -384,12 +393,50 @@ export class ProjectPinMapStore {
     return join(root, ".pinmap", "index.json");
   }
 
-  private mapPath(root: string, mapId: string): string {
-    return join(this.mapsDir(root), `${mapId}.json`);
+  private mapPath(root: string, index: ProjectPinMapIndex, mapId: string): string {
+    return join(root, this.preferredMapRelativePath(index, mapId));
   }
 
   private mapsDir(root: string): string {
     return join(root, ".pinmap", "maps");
+  }
+
+  private async resolveReadableMapPath(
+    root: string,
+    index: ProjectPinMapIndex,
+    mapId: string
+  ): Promise<MapPathEntry> {
+    const preferred = this.mapPathEntry(root, this.preferredMapRelativePath(index, mapId));
+    if (await this.exists(preferred.absolutePath)) {
+      return preferred;
+    }
+
+    const legacy = this.mapPathEntry(root, `.pinmap/maps/${mapId}.json`);
+    if (await this.exists(legacy.absolutePath)) {
+      return legacy;
+    }
+
+    return preferred;
+  }
+
+  private preferredMapRelativePathForResult(indexResult: ReadIndexResult, mapId: string): string {
+    const index =
+      indexResult.kind === "ready" ? indexResult.index : { schemaVersion: 1 as const, maps: [] };
+    return this.preferredMapRelativePath(index, mapId);
+  }
+
+  private preferredMapRelativePath(index: ProjectPinMapIndex, mapId: string): string {
+    const mapIndex = index.maps.findIndex((map) => map.id === mapId);
+    const pathIndex = mapIndex === -1 ? index.maps.length : mapIndex;
+    const suffix = pathIndex === 0 ? "" : `-${pathIndex + 1}`;
+    return `.pinmap/maps/map${suffix}.json`;
+  }
+
+  private mapPathEntry(root: string, relativePath: string): MapPathEntry {
+    return {
+      relativePath,
+      absolutePath: join(root, relativePath)
+    };
   }
 
   private async writeJsonAtomically(path: string, value: unknown): Promise<void> {

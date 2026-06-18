@@ -89,7 +89,7 @@ describe("ProjectPinMapStore", () => {
     expect(readJson(root, ".pinmap/index.json")).toEqual(
       result.kind === "ready" ? result.index : undefined
     );
-    expect(readJson(root, ".pinmap/maps/default.json")).toEqual(
+    expect(readJson(root, ".pinmap/maps/map.json")).toEqual(
       result.kind === "ready" ? result.activeMap : undefined
     );
   });
@@ -99,8 +99,8 @@ describe("ProjectPinMapStore", () => {
     const store = createStore(root, [firstNow, secondNow]);
 
     await store.createDefaultMap();
-    const existingMap = readJson(root, ".pinmap/maps/default.json") as ProjectPinMapDocument;
-    writeJson(root, ".pinmap/maps/default.json", {
+    const existingMap = readJson(root, ".pinmap/maps/map.json") as ProjectPinMapDocument;
+    writeJson(root, ".pinmap/maps/map.json", {
       ...existingMap,
       chipId: "gd32f407",
       assignments: [
@@ -129,12 +129,12 @@ describe("ProjectPinMapStore", () => {
       },
       activeMap: { id: "default-2", name: "Default", updatedAt: secondNow }
     });
-    expect(readJson(root, ".pinmap/maps/default.json")).toMatchObject({
+    expect(readJson(root, ".pinmap/maps/map.json")).toMatchObject({
       id: "default",
       chipId: "gd32f407",
       assignments: [{ id: "gd32f407:PA0:USART1_CTS" }]
     });
-    expect(readJson(root, ".pinmap/maps/default-2.json")).toMatchObject({
+    expect(readJson(root, ".pinmap/maps/map-2.json")).toMatchObject({
       id: "default-2",
       name: "Default",
       assignments: []
@@ -199,7 +199,7 @@ describe("ProjectPinMapStore", () => {
       },
       activeMap: { id: "motor-control", updatedAt: firstNow }
     });
-    expect(readJson(root, ".pinmap/maps/motor-control.json")).toMatchObject({
+    expect(readJson(root, ".pinmap/maps/map.json")).toMatchObject({
       id: "motor-control",
       updatedAt: firstNow
     });
@@ -297,7 +297,7 @@ describe("ProjectPinMapStore", () => {
       }
     });
     expect(existsSync(join(root, ".pinmap/index.json"))).toBe(true);
-    expect(existsSync(join(root, ".pinmap/maps/new-map.json"))).toBe(true);
+    expect(existsSync(join(root, ".pinmap/maps/map.json"))).toBe(true);
   });
 
   it("creates an empty New Map from an undefined source when maps already exist", async () => {
@@ -368,7 +368,7 @@ describe("ProjectPinMapStore", () => {
     expect(readJson(root, ".pinmap/index.json")).toMatchObject({
       activeMapId: "default"
     });
-    expect(readJson(root, ".pinmap/maps/default.json")).toMatchObject({
+    expect(readJson(root, ".pinmap/maps/map.json")).toMatchObject({
       id: "default",
       updatedAt: firstNow
     });
@@ -422,15 +422,39 @@ describe("ProjectPinMapStore", () => {
     const store = createStore(root, [firstNow, secondNow]);
 
     await store.createDefaultMap();
-    rmSync(join(root, ".pinmap/maps/default.json"));
+    rmSync(join(root, ".pinmap/maps/map.json"));
 
     const result = await store.duplicateMap("default", "Default Copy");
 
     expect(result).toMatchObject({
       kind: "error",
-      message: expect.stringContaining("Failed to read .pinmap/maps/default.json")
+      message: expect.stringContaining("Failed to read .pinmap/maps/map.json")
     });
-    expect(existsSync(join(root, ".pinmap/maps/default-copy.json"))).toBe(false);
+    expect(existsSync(join(root, ".pinmap/maps/map-2.json"))).toBe(false);
+  });
+
+  it("loads legacy map files named after their ids", async () => {
+    const root = createRoot();
+    const store = createStore(root);
+
+    writeJson(root, ".pinmap/index.json", {
+      schemaVersion: 1,
+      activeMapId: "default",
+      maps: [{ id: "default", name: "Default", updatedAt: firstNow }]
+    });
+    writeJson(root, ".pinmap/maps/default.json", {
+      schemaVersion: 1,
+      id: "default",
+      name: "Default",
+      mapView: "package",
+      assignments: [],
+      updatedAt: firstNow
+    });
+
+    await expect(store.loadMap()).resolves.toMatchObject({
+      kind: "ready",
+      activeMap: { id: "default", name: "Default" }
+    });
   });
 
   it("uses the first workspace folder only", async () => {

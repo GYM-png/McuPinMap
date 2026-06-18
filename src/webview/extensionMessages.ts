@@ -53,7 +53,9 @@ export const handleExtensionMessage = (
 
     case "assignmentsUpdated":
       store.setAssignments(message.assignments, message.conflicts);
-      clearError();
+      if (store.projectMapSaveStatus !== "failed") {
+        clearError();
+      }
       break;
 
     case "error":

@@ -235,6 +235,40 @@ describe("handleExtensionMessage", () => {
     expect(usePinMapStore.getState().projectMapSaveStatus).toBe("failed");
   });
 
+  it("keeps project pin map save failures visible after assignment refreshes", () => {
+    let error = "";
+
+    handleExtensionMessage(
+      {
+        type: "projectMapSaveFailed",
+        message: "save failed"
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    handleExtensionMessage(
+      {
+        type: "assignmentsUpdated",
+        assignments: [],
+        conflicts: []
+      },
+      () => {
+        error = "";
+      },
+      (message) => {
+        error = message;
+      }
+    );
+
+    expect(error).toBe("save failed");
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("failed");
+  });
+
   it("loads project pin map lists and preserves the active map when possible", () => {
     const firstMap = {
       id: "default",

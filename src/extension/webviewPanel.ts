@@ -22,9 +22,14 @@ import { getNonce, renderPinMapLauncherHtml } from "./sidebarLauncher";
 const ASSIGNMENTS_KEY = "mcupinmap.assignments";
 
 let currentPinMapPanel: vscode.WebviewPanel | undefined;
+let currentPinMapController: PinMapWebviewController | undefined;
 
 export type OpenPinMapPanelOptions = {
   mapId?: string;
+};
+
+type PinMapWebviewController = {
+  selectProjectMap: (mapId: string) => void;
 };
 
 export const openPinMapPanel = (
@@ -35,6 +40,9 @@ export const openPinMapPanel = (
 ): void => {
   if (currentPinMapPanel) {
     currentPinMapPanel.reveal(vscode.ViewColumn.One);
+    if (options.mapId) {
+      currentPinMapController?.selectProjectMap(options.mapId);
+    }
     return;
   }
 
@@ -50,9 +58,16 @@ export const openPinMapPanel = (
   currentPinMapPanel = panel;
   panel.onDidDispose(() => {
     currentPinMapPanel = undefined;
+    currentPinMapController = undefined;
   });
 
-  initializePinMapWebview(panel.webview, context, chipRepository, projectPinMapStore, options);
+  currentPinMapController = initializePinMapWebview(
+    panel.webview,
+    context,
+    chipRepository,
+    projectPinMapStore,
+    options
+  );
 };
 
 export class PinMapViewProvider implements vscode.WebviewViewProvider {
@@ -88,7 +103,7 @@ const initializePinMapWebview = (
   chipRepository: ChipRepository,
   projectPinMapStore: ProjectPinMapStore,
   options: OpenPinMapPanelOptions
-): void => {
+): PinMapWebviewController => {
   const remoteChipRegistry = new RemoteChipRegistry(context, chipRepository);
   let installedChips = chipRepository.listChips();
   let selectedChipId: string | undefined = installedChips[0]?.id;
@@ -102,6 +117,14 @@ const initializePinMapWebview = (
   const getSelectedAssignments = (): Assignment[] =>
     selectedChipId
       ? assignments.filter((assignment) => assignment.chipId === selectedChipId)
+      : [];
+
+  const getAssignmentsForChip = (
+    sourceAssignments: Assignment[],
+    chipId: string | undefined
+  ): Assignment[] =>
+    chipId
+      ? sourceAssignments.filter((assignment) => assignment.chipId === chipId)
       : [];
 
   const persistAssignments = async (nextAssignments: Assignment[]): Promise<void> => {
@@ -203,18 +226,35 @@ const initializePinMapWebview = (
 
     postMessage({ type: "projectMapSaveStarted" });
 
+    const patchHasChipId = Object.prototype.hasOwnProperty.call(patch, "chipId");
+    const nextChipId = patchHasChipId ? patch.chipId : selectedChipId;
     const nextMap: ProjectPinMapDocument = {
       ...activeProjectMap,
       ...patch,
-      ...(selectedChipId === undefined ? {} : { chipId: selectedChipId }),
+      ...(nextChipId === undefined ? {} : { chipId: nextChipId }),
       assignments: patch.assignments ?? getSelectedAssignments()
     };
-    if (selectedChipId === undefined) {
+    if (nextChipId === undefined) {
       delete nextMap.chipId;
     }
 
     const result = await projectPinMapStore.saveMap(nextMap);
 
+    if (result.kind === "ready" && result.activeMap) {
+      activateProjectMap(result.activeMap);
+      postMessage({ type: "projectMapSaved", map: summarizeProjectPinMap(result.activeMap) });
+      postProjectMapsLoaded(result);
+      return true;
+    }
+
+    postMessage({ type: "projectMapSaveFailed", message: projectMapStoreErrorMessage(result) });
+    return false;
+  };
+
+  const saveProjectMapDocument = async (map: ProjectPinMapDocument): Promise<boolean> => {
+    postMessage({ type: "projectMapSaveStarted" });
+
+    const result = await projectPinMapStore.saveMap(map);
     if (result.kind === "ready" && result.activeMap) {
       activateProjectMap(result.activeMap);
       postMessage({ type: "projectMapSaved", map: summarizeProjectPinMap(result.activeMap) });
@@ -238,18 +278,35 @@ const initializePinMapWebview = (
     await vscode.window.showTextDocument(document, { preview: false });
   };
 
-  const loadProjectMap = async (mapId?: string): Promise<void> => {
+  const loadProjectMap = async (
+    mapId?: string,
+    options: { postError?: boolean } = {}
+  ): Promise<ProjectPinMapStoreResult> => {
     const result = await projectPinMapStore.loadMap(mapId);
     postProjectMapsLoaded(result);
 
     if (result.kind === "ready" && result.activeMap) {
       activateProjectMap(result.activeMap);
-      return;
+      return result;
     }
 
-    if (result.kind === "no-workspace" || result.kind === "error") {
+    if (
+      options.postError !== false &&
+      (result.kind === "no-workspace" || result.kind === "error")
+    ) {
       postMessage({ type: "error", message: projectMapStoreErrorMessage(result) });
     }
+
+    return result;
+  };
+
+  const selectProjectMap = (mapId: string): void => {
+    void (async () => {
+      const result = await loadProjectMap(mapId);
+      if (result.kind === "ready" && result.activeMap) {
+        postChipLoaded();
+      }
+    })();
   };
 
   const createProjectMap = async (name: string): Promise<ProjectPinMapStoreResult> => {
@@ -278,15 +335,33 @@ const initializePinMapWebview = (
       switch (message.type) {
         case "ready":
           refreshInstalledChips();
-          await loadProjectMap(options.mapId);
+          const projectMapLoadResult = await loadProjectMap(options.mapId, { postError: false });
           postMessage({ type: "chipsLoaded", chips: installedChips, selectedChipId });
           postInstalledChipsLoaded();
           postChipLoaded();
+          if (
+            projectMapLoadResult.kind === "no-workspace" ||
+            projectMapLoadResult.kind === "error"
+          ) {
+            postMessage({
+              type: "error",
+              message: projectMapStoreErrorMessage(projectMapLoadResult)
+            });
+          }
           break;
 
         case "selectChip":
-          selectedChipId = message.chipId;
-          await saveActiveProjectMap({ chipId: message.chipId });
+          if (activeProjectMap) {
+            const saved = await saveActiveProjectMap({
+              chipId: message.chipId,
+              assignments: getAssignmentsForChip(assignments, message.chipId)
+            });
+            if (!saved) {
+              break;
+            }
+          } else {
+            selectedChipId = message.chipId;
+          }
           postChipLoaded();
           break;
 
@@ -340,11 +415,20 @@ const initializePinMapWebview = (
 
           try {
             const chip = await remoteChipRegistry.downloadRemoteChip(message.chipId);
-            selectedChipId = chip.id;
             refreshInstalledChips();
             postInstalledChipsLoaded();
             postMessage({ type: "chipDownloadCompleted", chip });
-            await saveActiveProjectMap({ chipId: chip.id });
+            if (activeProjectMap) {
+              const saved = await saveActiveProjectMap({
+                chipId: chip.id,
+                assignments: getAssignmentsForChip(assignments, chip.id)
+              });
+              if (!saved) {
+                break;
+              }
+            } else {
+              selectedChipId = chip.id;
+            }
             postChipLoaded();
           } catch (error) {
             postMessage({
@@ -381,10 +465,8 @@ const initializePinMapWebview = (
             }
 
             chipRepository.saveImportedChip(chip);
-            selectedChipId = chip.id;
             refreshInstalledChips();
             postInstalledChipsLoaded();
-            await saveActiveProjectMap({ chipId: chip.id });
             postMessage({
               type: "chipImportCompleted",
               chip: {
@@ -394,6 +476,17 @@ const initializePinMapWebview = (
                 family: chip.family
               }
             });
+            if (activeProjectMap) {
+              const saved = await saveActiveProjectMap({
+                chipId: chip.id,
+                assignments: getAssignmentsForChip(assignments, chip.id)
+              });
+              if (!saved) {
+                break;
+              }
+            } else {
+              selectedChipId = chip.id;
+            }
             postChipLoaded();
           } catch (error) {
             postMessage({
@@ -408,9 +501,13 @@ const initializePinMapWebview = (
           const nextAssignments = upsertAssignment(assignments, message.assignment);
 
           try {
-            assignments = nextAssignments;
             if (activeProjectMap) {
-              await saveActiveProjectMap({ assignments: getSelectedAssignments() });
+              const saved = await saveActiveProjectMap({
+                assignments: getAssignmentsForChip(nextAssignments, selectedChipId)
+              });
+              if (!saved) {
+                break;
+              }
             } else {
               await persistAssignments(nextAssignments);
             }
@@ -426,9 +523,13 @@ const initializePinMapWebview = (
           const nextAssignments = removeAssignment(assignments, message.assignmentId);
 
           try {
-            assignments = nextAssignments;
             if (activeProjectMap) {
-              await saveActiveProjectMap({ assignments: getSelectedAssignments() });
+              const saved = await saveActiveProjectMap({
+                assignments: getAssignmentsForChip(nextAssignments, selectedChipId)
+              });
+              if (!saved) {
+                break;
+              }
             } else {
               await persistAssignments(nextAssignments);
             }
@@ -441,8 +542,10 @@ const initializePinMapWebview = (
         }
 
         case "selectProjectMap": {
-          await loadProjectMap(message.mapId);
-          postChipLoaded();
+          const result = await loadProjectMap(message.mapId);
+          if (result.kind === "ready" && result.activeMap) {
+            postChipLoaded();
+          }
           break;
         }
 
@@ -511,11 +614,9 @@ const initializePinMapWebview = (
         }
 
         case "saveProjectMap":
-          activeProjectMap = message.map;
-          selectedChipId = message.map.chipId;
-          assignments = message.map.assignments;
-          await saveActiveProjectMap(message.map);
-          postChipLoaded();
+          if (await saveProjectMapDocument(message.map)) {
+            postChipLoaded();
+          }
           break;
 
         case "export":
@@ -537,6 +638,8 @@ const initializePinMapWebview = (
     undefined,
     context.subscriptions
   );
+
+  return { selectProjectMap };
 };
 
 const getHtml = (webview: vscode.Webview, extensionUri: vscode.Uri): string => {

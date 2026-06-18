@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import type { ProjectPinMapSummary } from "../../src/shared/projectPinMapConfig";
 import type { Chip } from "../../src/shared/types";
 import { usePinMapStore } from "../../src/webview/state/usePinMapStore";
 
@@ -27,6 +28,12 @@ const lqfp144: Chip["packages"][number] = {
   totalPads: 144,
   pins: []
 };
+
+const createProjectMap = (id: string, name: string): ProjectPinMapSummary => ({
+  id,
+  name,
+  updatedAt: `2026-06-18T00:00:00.000Z-${id}`
+});
 
 afterEach(() => {
   usePinMapStore.setState(usePinMapStore.getInitialState(), true);
@@ -116,5 +123,41 @@ describe("usePinMapStore package view state", () => {
     expect(usePinMapStore.getState().importingCsv).toBe(true);
     store.finishImport();
     expect(usePinMapStore.getState().importingCsv).toBe(false);
+  });
+
+  it("selects the requested project map when project maps are loaded", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const secondMap = createProjectMap("motor", "Motor Control");
+
+    usePinMapStore.getState().setProjectMaps([firstMap, secondMap], "motor");
+
+    expect(usePinMapStore.getState().projectMaps).toEqual([firstMap, secondMap]);
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+  });
+
+  it("preserves the active project map when a reload omits an active id", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const secondMap = createProjectMap("motor", "Motor Control");
+
+    const store = usePinMapStore.getState();
+    store.setProjectMaps([firstMap, secondMap], "motor");
+    store.setProjectMaps([firstMap, secondMap]);
+
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(secondMap);
+  });
+
+  it("tracks project map upserts and save status", () => {
+    const firstMap = createProjectMap("default", "Default");
+    const renamedMap = createProjectMap("default", "Renamed");
+
+    const store = usePinMapStore.getState();
+    store.setProjectMap(firstMap);
+    store.setProjectMapSaveStatus("saving");
+    store.setProjectMap(renamedMap);
+    store.setProjectMapSaveStatus("saved");
+
+    expect(usePinMapStore.getState().projectMaps).toEqual([renamedMap]);
+    expect(usePinMapStore.getState().activeProjectMap).toEqual(renamedMap);
+    expect(usePinMapStore.getState().projectMapSaveStatus).toBe("saved");
   });
 });

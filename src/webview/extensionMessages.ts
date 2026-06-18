@@ -25,6 +25,32 @@ export const handleExtensionMessage = (
       clearError();
       break;
 
+    case "projectMapsLoaded":
+      store.setProjectMaps(message.maps, message.activeMapId);
+      clearError();
+      break;
+
+    case "projectMapLoaded":
+      store.setProjectMap(message.map);
+      store.setProjectMapSaveStatus("saved");
+      clearError();
+      break;
+
+    case "projectMapSaveStarted":
+      store.setProjectMapSaveStatus("saving");
+      break;
+
+    case "projectMapSaved":
+      store.setProjectMap(message.map);
+      store.setProjectMapSaveStatus("saved");
+      clearError();
+      break;
+
+    case "projectMapSaveFailed":
+      store.setProjectMapSaveStatus("failed");
+      setError(message.message);
+      break;
+
     case "assignmentsUpdated":
       store.setAssignments(message.assignments, message.conflicts);
       clearError();

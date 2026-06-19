@@ -1,5 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ChipRepository } from "../../src/extension/chipRepository";
@@ -79,6 +79,25 @@ describe("ChipRepository", () => {
     expect(() => repository.loadChip("EXTENSION_ONLY")).toThrow(
       "Chip EXTENSION_ONLY is not installed in the local chip library."
     );
+  });
+
+  it("migrates chips downloaded by the local development extension id", () => {
+    const currentStorageRoot = join(storageRoot, "gym.mcupinmap");
+    const devStorageRoot = join(dirname(currentStorageRoot), "local-dev.mcupinmap");
+    mkdirSync(join(devStorageRoot, "chips"), { recursive: true });
+    writeFileSync(join(devStorageRoot, "chips", "gd32f407.json"), JSON.stringify(chip()), "utf8");
+
+    const repository = new ChipRepository(context(currentStorageRoot, extensionRoot));
+
+    expect(repository.listChips()).toEqual([
+      {
+        id: "GD32F407",
+        displayName: "Local GD32F407",
+        vendor: "GigaDevice",
+        family: "GD32F4"
+      }
+    ]);
+    expect(repository.loadChip("GD32F407")).toEqual(chip());
   });
 
 });

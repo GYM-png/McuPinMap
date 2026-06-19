@@ -8,7 +8,6 @@ import {
 import {
   getDraggedWorkspaceLayout,
   getWorkspaceLayoutFromState,
-  resetWorkspaceLayout,
   setWorkspaceLayoutInState,
   type WorkspaceDivider,
   type WorkspaceLayout
@@ -35,13 +34,7 @@ const workspaceGridStyle = (
   "--workspace-detail-width": `${layout.detailWidth}px`
 });
 
-export const Shell = ({
-  sidebar,
-  detail,
-  error,
-  projectMapHeader,
-  children
-}: ShellProps): JSX.Element => {
+export const Shell = ({ sidebar, detail, error, children }: ShellProps): JSX.Element => {
   const [layout, setLayout] = useState(() =>
     getWorkspaceLayoutFromState(
       vscode.getState(),
@@ -96,32 +89,10 @@ export const Shell = ({
 
   return (
     <main className="pin-workspace">
-      <header className="workspace-header">
-        <div>
-          <p className="eyebrow">McuPinMap</p>
-          <h1>Pin Map Workspace</h1>
-        </div>
-        <div className="workspace-header-actions">
-          <p className="workspace-kicker">
-            Search alternate functions, assign signals, and catch pin conflicts before firmware
-            setup.
-          </p>
-          {projectMapHeader}
-          <button
-            type="button"
-            className="secondary-action workspace-reset-button"
-            onClick={() => updateLayout(resetWorkspaceLayout())}
-          >
-            Reset layout
-          </button>
-        </div>
-      </header>
-
       {error ? <p className="error-banner">{error}</p> : null}
-
       <section
         className={`workspace-grid${dragState ? " is-resizing" : ""}`}
-        aria-label="Pin map workspace"
+        aria-label="Pin map content"
         style={workspaceGridStyle(layout)}
       >
         <aside className="sidebar-region">{sidebar}</aside>

@@ -207,7 +207,7 @@ export const renderPinMapLauncherHtml = (nonce: string, state: PinMapLauncherSta
         min-width: 20px;
         align-items: center;
         justify-content: center;
-        color: var(--vscode-symbolIcon-functionForeground, var(--vscode-foreground));
+        color: var(--vscode-foreground);
         font-size: 15px;
         line-height: 1;
       }

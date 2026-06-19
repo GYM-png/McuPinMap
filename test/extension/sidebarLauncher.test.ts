@@ -22,6 +22,8 @@ describe("renderPinMapLauncherHtml", () => {
     expect(html).toContain("launcher-section-actions");
     expect(html).toContain("launcher-section-pin-maps");
     expect(html).toContain('<span class="launcher-row-icon">+</span>');
+    expect(html).toContain("color: var(--vscode-foreground);");
+    expect(html).not.toContain("--vscode-symbolIcon-functionForeground");
     expect(html).toContain("Create Default Map");
     expect(html).toContain("data-action=\"createDefaultMap\"");
     expect(html).toContain("No local pin maps yet.");

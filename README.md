@@ -77,9 +77,7 @@ Runtime chip data is generated as `chip.json` next to the source directory in
 the data repository. Downloaded chips are cached in VS Code global storage for
 the extension.
 
-The main repository may keep legacy development fixtures under `data/chips/`,
-but release VSIX packages exclude `data/**`, `generated/**`, and
-`external-data/**`.
+Release VSIX packages exclude `generated/**` and `external-data/**`.
 
 ## CSV Formats
 
@@ -121,7 +119,7 @@ Run tests:
 npm test
 ```
 
-Build the legacy fixture data, extension host, and Webview:
+Build the extension host and Webview:
 
 ```powershell
 npm run build
@@ -131,12 +129,6 @@ Build only the extension host and Webview:
 
 ```powershell
 npm run build:extension-only
-```
-
-Validate legacy fixture chip data:
-
-```powershell
-npm run validate:data
 ```
 
 Package a lightweight VSIX without bundled chip data:

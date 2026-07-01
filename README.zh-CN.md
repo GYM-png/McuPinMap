@@ -68,7 +68,7 @@ chips/<vendor>/<family>/<part-number>/source/
 
 运行时使用的芯片数据会在数据仓库中生成为 `chip.json`。用户下载过的芯片数据会缓存到该插件的 VS Code global storage 中。
 
-主仓库可以保留 `data/chips/` 下的 legacy/dev/test fixture 数据，但发布 VSIX 时会排除 `data/**`、`generated/**` 和 `external-data/**`。
+发布 VSIX 时会排除 `generated/**` 和 `external-data/**`。
 
 ## CSV 格式
 
@@ -110,7 +110,7 @@ npm install
 npm test
 ```
 
-构建 legacy fixture 数据、Extension Host 和 Webview：
+构建 Extension Host 和 Webview：
 
 ```powershell
 npm run build
@@ -120,12 +120,6 @@ npm run build
 
 ```powershell
 npm run build:extension-only
-```
-
-校验 legacy fixture 芯片数据：
-
-```powershell
-npm run validate:data
 ```
 
 打包不包含芯片数据的轻量 VSIX：

@@ -66,8 +66,6 @@
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('generated',{recursive:true,force:true})\"",
-    "validate:data": "tsx scripts/validate-data-pack.ts",
-    "build:data": "tsx scripts/build-data-pack.ts",
     "build:extension-only": "npm run build:extension && npm run build:webview",
     "validate:remote-data": "tsx scripts/validate-data-pack.ts --data-root external-data/mcupinfunc-data",
     "build:remote-data": "tsx scripts/build-remote-chip-index.ts --data-root external-data/mcupinfunc-data --owner GYM-png --repo mcupinfunc-data --branch main",
@@ -75,7 +73,7 @@
     "package:light": "npm run build:extension-only && npx --yes @vscode/vsce@latest package --allow-missing-repository",
     "build:extension": "tsc -p tsconfig.extension.json",
     "build:webview": "vite build",
-    "build": "npm run validate:data && npm run build:data && npm run build:extension && npm run build:webview",
+    "build": "npm run build:extension-only",
     "test": "vitest run",
     "watch:webview": "vite build --watch"
   },

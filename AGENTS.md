@@ -50,8 +50,8 @@ Webview：
 数据处理：
 - `csv-parse` 解析 CSV。
 - 搜索逻辑使用 `src/shared/` 中的索引与匹配规则。
-- `scripts/validate-data-pack.ts` 校验 CSV 数据源；默认仍可用于仓库内 legacy/dev/test fixture，后续应支持外部数据根目录。
-- `scripts/build-data-pack.ts` 将 CSV 数据生成运行时 JSON；后续 remote-data 构建应输出到外部数据仓库。
+- `scripts/validate-data-pack.ts` 校验 CSV 数据源，支持通过 `--data-root` 指定外部数据根目录。
+- `scripts/build-data-pack.ts` 将 CSV 数据生成运行时 JSON，供远程数据构建脚本复用。
 
 测试：
 - Vitest。
@@ -63,8 +63,6 @@ Webview：
 主要目录：
 
 ```text
-data/chips/                 legacy/dev/test fixture 数据；不再作为发布内置数据源
-generated/chips/            本地构建生成的运行时 chip JSON，不提交、不打包
 external-data/mcupinfunc-data/
                             外部数据仓库的本地 checkout；不提交到主仓库
 scripts/                    数据校验和构建脚本
@@ -78,7 +76,6 @@ docs/superpowers/           设计文档和实施计划
 不要提交：
 - `node_modules/`
 - `dist/`
-- `data/`
 - `generated/`
 - `external-data/`
 - `.vscode-test/`
@@ -90,12 +87,11 @@ docs/superpowers/           设计文档和实施计划
 ## 数据包规范
 
 目标发布架构：
-- VSIX 不发布 `data/**`、`generated/**` 或 `external-data/**`。
+- VSIX 不发布 `generated/**` 或 `external-data/**`。
 - 所有 curated chip CSV 源数据维护在外部 GitHub 数据仓库 `GYM-png/mcupinfunc-data`。
 - 主仓库中的本地 checkout 路径为 `external-data/mcupinfunc-data/`，该目录必须被 `.gitignore` 忽略。
 - 运行时芯片数据计划按用户选择下载，并缓存到 VS Code `ExtensionContext.globalStorageUri` 下。
 - 用户导入本地 CSV 时，仍必须通过共享 validator/parser/normalizer 后再写入本地芯片库。
-- `data/chips/` 如保留在本仓库，只能作为 legacy/dev/test fixture 数据，不能作为发布内置数据源，不能被 VSIX 打包。
 - 运行时应通过本地用户芯片库、远程下载或本地 CSV 导入获取芯片数据；不要重新引入对扩展安装目录内置数据文件的发布依赖。
 
 芯片数据路径：
@@ -149,8 +145,7 @@ GD32F470_BGA176_PINOUT.csv
 ```
 
 Manifest：
-- 旧 fixture manifest 文件为 `data/chips/manifest.json`，只用于 legacy/dev/test 场景。
-- 外部数据仓库的远程索引计划使用仓库根目录的 `index.json`。
+- 外部数据仓库的远程索引使用仓库根目录的 `index.json`。
 - 新增芯片必须同步更新对应数据仓库索引或可生成索引的源信息。
 - 新增 package pinout CSV 必须添加到对应 chip 的 `packages` 列表。
 - `packages[].name` 支持 `LQFP<number>` 和 `BGA<number>`。
@@ -197,23 +192,13 @@ BallName,PinName,PinType
 
 ## 生成数据规范
 
-当前 legacy/dev/test fixture 构建命令：
+远程数据构建命令：
 
 ```powershell
-npm run build:data
+npm run build:remote-data
 ```
 
-生成：
-
-```text
-generated/chips/<chip-id-lowercase>.json
-```
-
-当前示例：
-
-```text
-generated/chips/gd32f407.json
-```
+生成外部数据仓库的 per-chip `chip.json` 和根 `index.json`。
 
 生成数据应包含：
 - `Chip.id`
@@ -235,11 +220,10 @@ BGA package layout 规则：
 - `packageType` 固定为 `BGA`。
 - `pins` 使用 `ballName` 表示球位，渲染时由球位名称推导矩阵行列。
 
-计划中的 remote-data 构建：
+remote-data 构建命令：
 - `npm run validate:remote-data`：校验 `external-data/mcupinfunc-data/` 下的数据源。
 - `npm run build:remote-data`：生成外部数据仓库的 per-chip `chip.json` 和根 `index.json`。
 - `npm run build:extension-only`：只构建 extension/webview，不依赖内置芯片数据。
-- 以上命令在对应实现任务完成前只是计划目标，不应在当前代码尚未提供脚本时写入自动化流程。
 
 ## 开发命令
 
@@ -255,18 +239,6 @@ npm install
 npm test
 ```
 
-校验 legacy/dev/test fixture 数据包：
-
-```powershell
-npm run validate:data
-```
-
-生成 legacy/dev/test fixture 数据：
-
-```powershell
-npm run build:data
-```
-
 当前完整构建：
 
 ```powershell
@@ -274,8 +246,6 @@ npm run build
 ```
 
 当前完整构建会依次执行：
-- `validate:data`
-- `build:data`
 - `build:extension`
 - `build:webview`
 
@@ -327,8 +297,8 @@ CSV / 数据：
 - 校验器应尽早发现错误。
 - 解析器也应具备防御性，不要静默生成脏数据。
 - 新增 CSV 规则必须配套测试。
-- 新增 curated CSV 源数据应进入外部数据仓库，不应提交到主仓库 `data/`。
-- VSIX 打包必须排除 `data/**`、`generated/**` 和 `external-data/**`。
+- 新增 curated CSV 源数据应进入外部数据仓库。
+- VSIX 打包必须排除 `generated/**` 和 `external-data/**`。
 
 样式：
 - 维护现有 Webview 视觉风格。
@@ -353,28 +323,19 @@ npm test
 npm run build
 ```
 
-数据变更至少运行：
-
-```powershell
-npm run validate:data
-npm run build:data
-```
-
-远程数据架构实现完成后，外部数据仓库变更至少运行计划命令：
+外部数据仓库变更至少运行：
 
 ```powershell
 npm run validate:remote-data
 npm run build:remote-data
 ```
 
-轻量插件打包相关变更至少验证计划命令：
+轻量插件打包相关变更至少验证：
 
 ```powershell
 npm run build:extension-only
 npm run package:light
 ```
-
-在这些脚本实现前，不要把上述计划命令作为当前必过验证项。
 
 调试配置变更至少验证：
 
@@ -400,7 +361,6 @@ npm run build
 - 不提交构建产物：`dist/`、`generated/`。
 - 不提交依赖目录：`node_modules/`。
 - 不提交本地主仓库数据 checkout：`external-data/`。
-- 不提交发布用大体量 curated CSV 数据到主仓库 `data/`；应提交到外部数据仓库。
 - 修改数据包时，同步提交 manifest、CSV、校验/解析逻辑和测试。
 - 修改 VS Code 调试体验时，同步提交 `.vscode/launch.json` / `.vscode/tasks.json`。
 
@@ -427,8 +387,8 @@ npm run build
 
 完成前必须有当前证据：
 - 涉及代码逻辑时，`npm test` 通过。
-- 当前内置/fixture 构建路径变更时，`npm run build` 通过。
-- 轻量 VSIX / 远程数据架构实现完成后，使用 `npm run build:extension-only` 和对应 remote-data 验证命令。
+- `npm run build` 通过。
+- 使用 `npm run build:extension-only` 和对应 remote-data 验证命令验证轻量 VSIX / 远程数据架构。
 - `git status --short` 中没有未处理的任务相关改动。
 
 ## CodeGraph

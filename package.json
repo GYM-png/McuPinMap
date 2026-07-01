@@ -2,7 +2,7 @@
   "name": "mcupinmap",
   "displayName": "McuPinMap",
   "description": "VS Code Pin Map workspace for MCU GPIO alternate functions.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "gym",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,9 @@
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "keywords": [
     "mcu",
     "pinmap",
